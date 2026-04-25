@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>作業進捗 更新アプリ</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f7f6; margin: 10px; color: #333; }
+        .card { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .card-header { font-weight: bold; border-bottom: 2px solid #007bff; padding-bottom: 5px; margin-bottom: 10px; font-size: 1.1em; }
+        .info { font-size: 0.9em; margin-bottom: 5px; color: #555; }
+        .control-group { display: flex; gap: 10px; margin-top: 15px; }
+        select { padding: 8px; font-size: 1em; border-radius: 4px; border: 1px solid #ccc; flex-grow: 1; }
+        button { padding: 8px 15px; font-size: 1em; border: none; border-radius: 4px; background-color: #28a745; color: white; cursor: pointer; font-weight: bold; }
+        button:disabled { background-color: #ccc; }
+        #loading { text-align: center; padding: 20px; color: #666; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h2 style="text-align:center; color:#007bff;">🛠️ 現場用 進捗更新ツール</h2>
+    <div id="loading">指示書データを読み込み中...</div>
+    <div id="appContainer"></div>
+
+<script>
+    // ★新しく作った独立GASのURLをここに貼り付けてください★
+    const gasUrl = "https://script.google.com/macros/s/AKfycbxj-tIVJTXqGLYtQQoFC_Q-Ru3eys8VRpDpZhSK8OePAfbPq5Ht1ZjAqM3RMe_VX5TV/exec";
+
+    async function loadData() {
+        try {
+            const response = await fetch(gasUrl);
+            const data = await response.json();
+            const container = document.getElementById('appContainer');
+            container.innerHTML = '';
+
+            data.forEach(row => {
+                // 空行と、現場で必要ない「完了」済みデータは表示しない
+                if(!row["管理番号"] || row["進捗"] === "完了") return;
+
+                const div = document.createElement('div');
+                div.className = 'card';
+                div.innerHTML = `
+                    <div class="card-header">${row["管理番号"]}：${row["品名"]}</div>
+                    <div class="info">材質/処理: ${row["材質"] || "-"} / ${row["表面処理"] || "-"}</div>
+                    <div class="info">担当: ${row["担当者"] || "未定"} | 工程: ${row["加工工程"] || "-"}</div>
+                    <div class="control-group">
+                        <select id="status-${row["管理番号"]}">
+                            <option value="未着手" ${row["進捗"] === "未着手" ? "selected" : ""}>未着手</option>
+                            <option value="加工中" ${row["進捗"] === "加工中" ? "selected" : ""}>加工中</option>
+                            <option value="完了" ${row["進捗"] === "完了" ? "selected" : ""}>完了</option>
+                        </select>
+                        <button id="btn-${row["管理番号"]}" onclick="updateStatus('${row["管理番号"]}')">更新</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+
+            document.getElementById('loading').style.display = 'none';
+        } catch (error) {
+            document.getElementById('loading').innerText = "データの読み込みに失敗しました。";
+        }
+    }
+
+    async function updateStatus(id) {
+        const newStatus = document.getElementById(`status-${id}`).value;
+        const btn = document.getElementById(`btn-${id}`);
+        
+        btn.innerText = "更新中...";
+        btn.disabled = true;
+
+        try {
+            const response = await fetch(gasUrl, {
+                method: 'POST',
+                redirect: 'follow', 
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({ id: id, status: newStatus })
+            });
+
+            const result = await response.json();
+            if(result.success) {
+                alert(`管理番号 ${id} を「${newStatus}」に更新しました。`);
+                loadData();
+            } else {
+                alert("更新失敗: " + result.error);
+                btn.innerText = "更新";
+                btn.disabled = false;
+            }
+        } catch (error) {
+            alert("通信エラーが発生しました。");
+            btn.innerText = "更新";
+            btn.disabled = false;
+        }
+    }
+
+    window.onload = loadData;
+</script>
+
+</body>
+</html>
