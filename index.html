@@ -157,7 +157,7 @@
         btn.innerText = "更新中...";
         btn.disabled = true;
 
-        try {
+       try {
             const response = await fetch(gasUrl, {
                 method: 'POST',
                 redirect: 'follow', 
@@ -167,8 +167,21 @@
 
             const result = await response.json();
             if(result.success) {
-                // 更新成功後、自動でデータを再読込して画面を最新にする
-                refreshData();
+                // ★改善ポイント：GASから全件読み込まず、手元のデータを直接書き換える
+                const targetRow = globalData.find(row => String(row["ID"]) === String(id));
+                if(targetRow) {
+                    targetRow["完了確認"] = newStatus;
+                    targetRow["備考"] = newNote;
+                }
+                
+                // 画面を再描画（fetchしないので一瞬で終わる）
+                renderData(); 
+                
+                // （任意）ボタンを一瞬「完了！」にして視覚的にわかりやすくする
+                /* renderData()でボタンも再生成されるため記述不要ですが、
+                もしrenderData()を呼ばない設計にするならここでボタンの文字を変えます。
+                */
+
             } else {
                 alert("更新失敗: " + result.error);
                 btn.innerText = "更新";
