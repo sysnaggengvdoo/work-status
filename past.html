@@ -102,8 +102,10 @@
       </div>
     </main>
     
-<nav class="fixed bottom-0 left-0 right-0 w-full mx-auto bg-white border-t-2 border-gray-300 flex justify-around z-50 shadow-[0_-5px_10px_rgba(0,0,0,0.05)]">
-      <div onclick="window.location.href='index.html';" class="cursor-pointer flex items-center justify-center w-1/2 py-2 text-gray-500 border-r border-gray-200 font-bold text-lg hover:bg-gray-50 transition">
+    <!-- 🌟 過去ログ検索 (past.html) のナビ -->
+    <nav class="fixed bottom-0 left-0 right-0 w-full mx-auto bg-white border-t-2 border-gray-300 flex justify-around z-50 shadow-[0_-5px_10px_rgba(0,0,0,0.05)]">
+      <!-- ★hrefではなくreplaceを使い、フルURLではなくファイル名だけにする -->
+      <div onclick="window.location.replace('index.html');" class="cursor-pointer flex items-center justify-center w-1/2 py-2 text-gray-500 border-r border-gray-200 font-bold text-lg hover:bg-gray-50 transition">
         今日の作業
       </div>
       <div class="flex items-center justify-center w-1/2 py-2 text-blue-700 bg-blue-50 font-bold text-lg border-t-4 border-blue-700">
