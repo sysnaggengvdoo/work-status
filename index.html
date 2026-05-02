@@ -35,7 +35,7 @@
         .status-planned { border-left-color: #fcd34d !important; background-color: #fefce8; } 
         .status-gray { 
             border-left-color: #6b7280 !important; 
-            background-color: #e5e7eb !important;       
+            background-color: #e5e7eb !important;        
             color: #4b5563;                             
             opacity: 0.8;                               
         }
@@ -78,8 +78,8 @@
       <div class="flex items-center justify-center w-1/2 py-2 text-blue-700 bg-blue-50 font-bold text-lg border-t-4 border-blue-700">
         今日の作業
       </div>
-      <!-- ★ aタグを divタグ に変更！ -->
-      <div onclick="window.location.href='past.html';" class="cursor-pointer flex items-center justify-center w-1/2 py-2 text-gray-500 border-l border-gray-200 font-bold text-lg hover:bg-gray-50 transition">
+      <!-- ★ ココです！ href を完全に消し去り、replace に変更しました！ -->
+      <div onclick="window.location.replace('past.html');" class="cursor-pointer flex items-center justify-center w-1/2 py-2 text-gray-500 border-l border-gray-200 font-bold text-lg hover:bg-gray-50 transition">
         過去ログ検索
       </div>
     </nav>
