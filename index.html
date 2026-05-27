@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="作業指示書">
     <link rel="manifest" href="manifest.json">
-    <title>作業指示書 Web-v3.5</title>
+    <title>作業指示書 Web-v3.51</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; margin: 0; color: #333; padding-bottom: 50px; overscroll-behavior-y: none; }
@@ -35,11 +35,29 @@
         .status-gray { 
             border-left-color: #6b7280 !important; 
             background-color: #e5e7eb !important;        
-            color: #4b5563;                               
-            opacity: 0.8;                                
+            color: #4b5563;                                
+            opacity: 0.8;                                  
         }
-        .card-header { font-weight: bold; font-size: 1.15em; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-        .output-tag { background: #f3f4f6; padding: 2px 8px; border-radius: 4px; font-size: 0.85em; color: #4b5563; border: 1px solid #d1d5db; }
+        .card-header { font-weight: bold; font-size: 1.15em; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; }
+        
+        /* ★キントーンリンク用のボタンCSS追加★ */
+        .kintone-link-btn {
+            background-color: #f59e0b; /* 目立つオレンジ色 */
+            color: white !important;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: bold;
+            text-decoration: none;
+            margin-left: 8px;
+            display: inline-block;
+            vertical-align: middle;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            transition: transform 0.1s, background-color 0.2s;
+        }
+        .kintone-link-btn:active { transform: scale(0.95); }
+
+        .output-tag { background: #f3f4f6; padding: 2px 8px; border-radius: 4px; font-size: 0.85em; color: #4b5563; border: 1px solid #d1d5db; white-space: nowrap; }
         .priority-text { color: #dc2626; font-weight: bold; font-size: 1.05em; }
         .info { font-size: 0.9em; margin-bottom: 4px; color: #374151; line-height: 1.4; }
         
@@ -81,7 +99,7 @@
 <div id="app" class="w-full mx-auto bg-gray-100 min-h-screen relative shadow-lg">
 
     <header class="header-container" id="main-header">
-        <h1>📋 作業指示書 Web-v3.5</h1>
+        <h1>📋 作業指示書 Web-v3.51</h1>
         <div class="search-box" id="search-box">
             <input type="text" id="searchInput" placeholder="🔍 整理No、顧客名、担当で検索..." oninput="renderData()">
             <button class="refresh-btn" onclick="refreshData()">🔄 最新に更新</button>
@@ -199,11 +217,19 @@
 
                 const div = document.createElement('div');
                 div.className = `card ${statusClass}`;
-                const outputDisplay = row["出"] ? `<span class="output-tag">出力: ${row["出"]}</span>` : "";
+                const outputDisplay = row["出"] ? `<div class="output-tag">出力: ${row["出"]}</div>` : "";
+                
+                // ★ キントーンURLがあればリンクボタンを生成、なければ空
+                const kintoneLink = row["修理カードURL"] 
+                    ? `<a href="${row["修理カードURL"]}" target="_blank" class="kintone-link-btn">🔗 修理カード</a>` 
+                    : "";
 
                 div.innerHTML = `
                     <div class="card-header">
-                        <span>${row["整理No."]}：${row["顧客名"] || "-"}</span>
+                        <div style="flex: 1; padding-right: 10px;">
+                            <span>${row["整理No."]}：${row["顧客名"] || "-"}</span>
+                            ${kintoneLink}
+                        </div>
                         ${outputDisplay}
                     </div>
                     <div class="info"><span class="priority-text">優先順：${row["順"] || "-"}</span></div>
