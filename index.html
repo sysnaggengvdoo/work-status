@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="作業指示書">
     <link rel="manifest" href="manifest.json">
-    <title>作業指示書 Web-v3.51</title>
+    <title>作業指示書 Web-v4.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; margin: 0; color: #333; padding-bottom: 50px; overscroll-behavior-y: none; }
@@ -40,9 +40,8 @@
         }
         .card-header { font-weight: bold; font-size: 1.15em; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; }
         
-        /* ★キントーンリンク用のボタンCSS追加★ */
         .kintone-link-btn {
-            background-color: #f59e0b; /* 目立つオレンジ色 */
+            background-color: #f59e0b;
             color: white !important;
             padding: 2px 8px;
             border-radius: 4px;
@@ -99,7 +98,7 @@
 <div id="app" class="w-full mx-auto bg-gray-100 min-h-screen relative shadow-lg">
 
     <header class="header-container" id="main-header">
-        <h1>📋 作業指示書 Web-v3.51</h1>
+        <h1>📋 作業指示書 Web-v4.0</h1>
         <div class="search-box" id="search-box">
             <input type="text" id="searchInput" placeholder="🔍 整理No、顧客名、担当で検索..." oninput="renderData()">
             <button class="refresh-btn" onclick="refreshData()">🔄 最新に更新</button>
@@ -128,12 +127,27 @@
       </div>
     </nav>
 
+    <div id="assigneeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-[200] flex items-center justify-center">
+        <div class="bg-white p-5 rounded-lg w-11/12 max-w-md max-h-[85vh] flex flex-col shadow-2xl">
+            <h2 class="text-xl font-bold mb-3 border-b pb-2 text-gray-800" id="modalTitle">担当者を選択</h2>
+            <div id="assigneeList" class="flex-1 overflow-y-auto space-y-2 mb-4 p-1">
+                </div>
+            <div class="flex justify-end gap-3 mt-2 border-t pt-3">
+                <button onclick="closeAssigneeModal()" class="px-5 py-3 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300">キャンセル</button>
+                <button onclick="confirmAssignee()" class="px-5 py-3 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 shadow-md">確定して保存</button>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script>
+    // ★重要：新しくデプロイしたAPIのURLに書き換えてください（現状は仮で以前のものを入れています）
     const gasUrl = "https://script.google.com/macros/s/AKfycbxj-tIVJTXqGLYtQQoFC_Q-Ru3eys8VRpDpZhSK8OePAfbPq5Ht1ZjAqM3RMe_VX5TV/exec";
 
     let globalData = [];
+    let attendanceData = {}; // ★追加：出勤者名簿を格納する変数
+    let currentEditingId = null; // ★追加：現在担当者を編集中の案件ID
 
     function switchMainTab(tabName) {
         const workMain = document.getElementById('work-order-main');
@@ -146,17 +160,13 @@
         if (tabName === 'calc') {
             workMain.style.display = 'none';
             calcFrame.style.display = 'block';
-            
             searchBox.style.display = 'none';
-
             navToday.className = "cursor-pointer flex items-center justify-center w-1/3 py-2 text-gray-500 border-gray-200 font-bold text-lg hover:bg-gray-50 transition";
             navCalc.className = "cursor-pointer flex items-center justify-center w-1/3 py-2 text-blue-700 bg-blue-50 font-bold text-lg border-l border-t-4 border-blue-700 transition";
         } else {
             workMain.style.display = 'block';
             calcFrame.style.display = 'none';
-            
             searchBox.style.display = 'flex';
-
             navToday.className = "cursor-pointer flex items-center justify-center w-1/3 py-2 text-blue-700 bg-blue-50 font-bold text-lg border-t-4 border-blue-700 transition";
             navCalc.className = "cursor-pointer flex items-center justify-center w-1/3 py-2 text-gray-500 border-l border-gray-200 font-bold text-lg hover:bg-gray-50 transition";
         }
@@ -172,11 +182,17 @@
     async function loadData() {
         try {
             const response = await fetch(`${gasUrl}?_=${new Date().getTime()}`);
-            globalData = await response.json();
+            const result = await response.json();
+            
+            // ★修正：JSON構造の変更に対応
+            globalData = result.tasks || [];
+            attendanceData = result.attendance || {};
+            
             document.getElementById('loading').style.display = 'none';
             renderData();
         } catch (error) {
             document.getElementById('loading').innerHTML = '<div style="color:red;">データの読み込みに失敗しました。</div>';
+            console.error(error);
         }
     }
 
@@ -219,11 +235,11 @@
                 div.className = `card ${statusClass}`;
                 const outputDisplay = row["出"] ? `<div class="output-tag">出力: ${row["出"]}</div>` : "";
                 
-                // ★ キントーンURLがあればリンクボタンを生成、なければ空
                 const kintoneLink = row["修理カードURL"] 
-                    ? `<a href="${row["修理カードURL"]}" target="_blank" class="kintone-link-btn">🔗 修理カード＜まだ使えません開発中＞</a>` 
+                    ? `<a href="${row["修理カードURL"]}" target="_blank" class="kintone-link-btn">🔗 修理カード</a>` 
                     : "";
 
+                // ★修正：担当者をテキストから、タップできるボタンに変更
                 div.innerHTML = `
                     <div class="card-header">
                         <div style="flex: 1; padding-right: 10px;">
@@ -234,7 +250,14 @@
                     </div>
                     <div class="info"><span class="priority-text">優先順：${row["順"] || "-"}</span></div>
                     <div class="info"><strong>作業内容:</strong> ${row["作業内容"] || "-"}</div>
-                    <div class="info"><strong>担当:</strong> ${row["担当"] || "未定"}</div>
+                    
+                    <div class="info mt-3 mb-2 flex items-center">
+                        <strong class="whitespace-nowrap">担当:</strong> 
+                        <button onclick="openAssigneeModal('${row["ID"]}', '${row["部署"]}')" class="ml-2 bg-white hover:bg-blue-50 text-blue-700 py-1.5 px-3 rounded border border-blue-400 shadow-sm text-sm font-bold transition-colors w-full text-left">
+                            <span id="display-tanto-${row["ID"]}">${row["担当"] || "未定（タップして選択）"}</span>
+                        </button>
+                    </div>
+
                     <div class="control-group">
                         <select id="status-${row["ID"]}">
                             <option value="未着手" ${!row["完了確認"] || row["完了確認"] === "未着手" ? "selected" : ""}>未着手</option>
@@ -255,28 +278,101 @@
         }
     }
 
+    // ==========================================
+    // ★追加：担当者モーダル制御用の関数群
+    // ==========================================
+    function openAssigneeModal(id, dept) {
+        currentEditingId = id;
+        document.getElementById('assigneeModal').classList.remove('hidden');
+        document.getElementById('modalTitle').innerText = `【${dept}】の担当者を選択`;
+
+        const listContainer = document.getElementById('assigneeList');
+        listContainer.innerHTML = '';
+
+        // 現在画面に表示されている担当者名を取得して配列化
+        const currentTantoStr = document.getElementById(`display-tanto-${id}`).innerText;
+        const currentTantoArr = currentTantoStr.split(',').map(s => s.trim());
+
+        // GASから受け取った名簿データから、該当部署の出勤者を抽出
+        const availableMembers = attendanceData[dept] || [];
+
+        if (availableMembers.length === 0) {
+            listContainer.innerHTML = '<p class="text-gray-500 text-center py-4">この部署の出勤者データがありません。</p>';
+            return;
+        }
+
+        // メンバーごとにチェックボックスを生成
+        availableMembers.forEach(member => {
+            const isChecked = currentTantoArr.includes(member) ? 'checked' : '';
+            const label = document.createElement('label');
+            label.className = 'flex items-center p-3 mb-2 border rounded-lg hover:bg-blue-50 cursor-pointer bg-gray-50 transition-colors';
+            label.innerHTML = `
+                <input type="checkbox" value="${member}" class="assignee-checkbox w-6 h-6 text-blue-600 mr-3 rounded" ${isChecked}>
+                <span class="text-lg font-medium text-gray-800">${member}</span>
+            `;
+            listContainer.appendChild(label);
+        });
+    }
+
+    function closeAssigneeModal() {
+        document.getElementById('assigneeModal').classList.add('hidden');
+        currentEditingId = null;
+    }
+
+    function confirmAssignee() {
+        if (!currentEditingId) return;
+        
+        // チェックされたメンバーを収集
+        const checkboxes = document.querySelectorAll('.assignee-checkbox:checked');
+        const selectedMembers = Array.from(checkboxes).map(cb => cb.value);
+        
+        // 画面の表示を書き換え
+        const displaySpan = document.getElementById(`display-tanto-${currentEditingId}`);
+        if (selectedMembers.length > 0) {
+            displaySpan.innerText = selectedMembers.join(', ');
+        } else {
+            displaySpan.innerText = '未定（タップして選択）';
+        }
+        
+        const targetId = currentEditingId;
+        closeAssigneeModal();
+        
+        // ★モーダルを閉じた直後に、自動的に更新（保存）処理を走らせる！
+        updateStatus(targetId);
+    }
+
+    // ==========================================
+    // データ更新（POST）処理
+    // ==========================================
     async function updateStatus(id) {
         const newStatus = document.getElementById(`status-${id}`).value;
         const newNote = document.getElementById(`note-${id}`).value;
-        const btn = document.getElementById(`btn-${id}`);
+        let newTanto = document.getElementById(`display-tanto-${id}`).innerText;
         
+        // 未定の場合は空文字にして送信
+        if (newTanto === "未定（タップして選択）") newTanto = "";
+
+        const btn = document.getElementById(`btn-${id}`);
         btn.innerText = "更新中...";
         btn.disabled = true;
 
-       try {
+        try {
             const response = await fetch(gasUrl, {
                 method: 'POST',
                 redirect: 'follow', 
                 headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({ id: id, status: newStatus, note: newNote })
+                // ★修正：tantoのデータも一緒に送信するように追加
+                body: JSON.stringify({ id: id, status: newStatus, note: newNote, tanto: newTanto })
             });
 
             const result = await response.json();
             if(result.success) {
+                // 成功したらローカルのデータも更新して再描画
                 const targetRow = globalData.find(row => String(row["ID"]) === String(id));
                 if(targetRow) {
                     targetRow["完了確認"] = newStatus;
                     targetRow["備考"] = newNote;
+                    targetRow["担当"] = newTanto; // ★追加
                 }
                 renderData(); 
             } else {
