@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="作業指示書">
     <link rel="manifest" href="manifest.json">
-    <title>作業指示書 Web-v4.0</title>
+    <title>作業指示書 Web-v3.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; margin: 0; color: #333; padding-bottom: 50px; overscroll-behavior-y: none; }
@@ -98,7 +98,7 @@
 <div id="app" class="w-full mx-auto bg-gray-100 min-h-screen relative shadow-lg">
 
     <header class="header-container" id="main-header">
-        <h1>📋 作業指示書 Web-v4.0</h1>
+        <h1>📋 作業指示書 Web-v3.6</h1>
         <div class="search-box" id="search-box">
             <input type="text" id="searchInput" placeholder="🔍 整理No、顧客名、担当で検索..." oninput="renderData()">
             <button class="refresh-btn" onclick="refreshData()">🔄 最新に更新</button>
@@ -143,7 +143,7 @@
 
 <script>
     // ★重要：新しくデプロイしたAPIのURLに書き換えてください（現状は仮で以前のものを入れています）
-    const gasUrl = "https://script.google.com/macros/s/AKfycbxj-tIVJTXqGLYtQQoFC_Q-Ru3eys8VRpDpZhSK8OePAfbPq5Ht1ZjAqM3RMe_VX5TV/exec";
+    const gasUrl = "https://script.google.com/macros/s/AKfycbwQqLYRy7JHH_orozMb9RF3fS_equHKdsImadg8MUHsVDPZ6E1f9yzgytqG2jqcxNAF/exec";
 
     let globalData = [];
     let attendanceData = {}; // ★追加：出勤者名簿を格納する変数
