@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>車両・駐車場管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; background-color: #f3f4f6; color: #333; padding-bottom: 70px; }
+    /* iOSのSafariでボトムナビが隠れないようにするためのハック */
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+    /* スクロールバー非表示 */
+    ::-webkit-scrollbar { display: none; }
+    
+    /* 車枠のベースデザイン */
+    .parking-slot {
+      border-radius: 8px;
+      padding: 10px;
+      height: 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: all 0.2s;
+    }
+    .slot-empty { background-color: #e5e7eb; color: #6b7280; border: 2px dashed #9ca3af; cursor: pointer; }
+    .slot-filled { background-color: #dbeafe; color: #1e3a8a; border: 2px solid #3b82f6; border-left-width: 8px; }
+  </style>
+</head>
+<body>
+  <div id="app" class="pb-safe">
+    
+    <header class="bg-blue-800 text-white p-4 sticky top-0 z-50 shadow-md flex justify-between items-center">
+      <div class="font-bold text-lg"><i class="fa-solid fa-truck-ramp-box mr-2"></i>車両・駐車場管理</div>
+      <button @click="fetchData" class="bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded text-sm transition">
+        <i class="fa-solid fa-rotate-right" :class="{'fa-spin': loading}"></i> 更新
+      </button>
+    </header>
+
+    <main class="p-4 max-w-4xl mx-auto">
+      
+      <div class="bg-white p-4 rounded-lg shadow-md mb-6 flex space-x-4 items-end">
+        <div class="flex-1">
+          <label class="block text-xs text-gray-500 mb-1">確認する日付</label>
+          <input type="date" v-model="filterDate" class="w-full p-2 border rounded bg-gray-50 text-lg font-bold">
+        </div>
+        <div class="flex-1">
+          <label class="block text-xs text-gray-500 mb-1">時間帯</label>
+          <select v-model="filterTimeSlot" class="w-full p-2 border rounded bg-gray-50 text-lg font-bold">
+            <option value="午前">午前 (AM)</option>
+            <option value="午後">午後 (PM)</option>
+            <option value="終日">終日</option>
+          </select>
+        </div>
+      </div>
+
+      <div v-if="loading" class="text-center py-10 text-gray-500 font-bold">
+        <i class="fa-solid fa-spinner fa-spin fa-2x mb-2"></i><br>データを読み込み中...
+      </div>
+
+      <div v-else>
+        <div class="mb-8">
+          <h2 class="text-lg font-bold text-gray-700 border-b-2 border-gray-300 mb-3 pb-1">
+            <i class="fa-solid fa-industry mr-2"></i>工場側 (5枠)
+          </h2>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div v-for="n in 5" :key="'factory-'+n" 
+                 class="parking-slot" 
+                 :class="getSlotData('工場側', n) ? 'slot-filled' : 'slot-empty'"
+                 @click="!getSlotData('工場側', n) && openModal('工場側', n)">
+              
+              <div v-if="getSlotData('工場側', n)" class="w-full h-full flex flex-col justify-between">
+                <div class="text-xs font-bold text-blue-600 mb-1">No.{{ n }}</div>
+                <div class="text-sm font-bold truncate">{{ getSlotData('工場側', n).info }}</div>
+                <div class="text-xs text-gray-600 flex justify-between">
+                  <span><i class="fa-solid fa-user"></i> {{ getSlotData('工場側', n).tanto }}</span>
+                </div>
+              </div>
+              
+              <div v-else class="text-center font-bold">
+                <div class="text-xs mb-1">No.{{ n }}</div>
+                <i class="fa-solid fa-square-plus fa-lg mb-1"></i><br>空き (予約)
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-bold text-gray-700 border-b-2 border-gray-300 mb-3 pb-1">
+            <i class="fa-solid fa-building mr-2"></i>本社裏 (8枠)
+          </h2>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div v-for="n in 8" :key="'hq-'+n" 
+                 class="parking-slot" 
+                 :class="getSlotData('本社裏', n) ? 'slot-filled' : 'slot-empty'"
+                 @click="!getSlotData('本社裏', n) && openModal('本社裏', n)">
+              
+              <div v-if="getSlotData('本社裏', n)" class="w-full h-full flex flex-col justify-between">
+                <div class="text-xs font-bold text-blue-600 mb-1">No.{{ n }}</div>
+                <div class="text-sm font-bold truncate">{{ getSlotData('本社裏', n).info }}</div>
+                <div class="text-xs text-gray-600 flex justify-between">
+                  <span><i class="fa-solid fa-user"></i> {{ getSlotData('本社裏', n).tanto }}</span>
+                </div>
+              </div>
+              
+              <div v-else class="text-center font-bold">
+                <div class="text-xs mb-1">No.{{ n }}</div>
+                <i class="fa-solid fa-square-plus fa-lg mb-1"></i><br>空き (予約)
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg w-full max-w-md overflow-hidden shadow-xl">
+        <div class="bg-blue-800 text-white px-4 py-3 font-bold flex justify-between items-center">
+          <span>新規予約：{{ form.location }} No.{{ form.slotNo }}</span>
+          <button @click="showModal = false" class="text-white hover:text-gray-200"><i class="fa-solid fa-xmark fa-lg"></i></button>
+        </div>
+        <div class="p-4 space-y-4">
+          <div class="flex space-x-2 text-sm bg-blue-50 p-2 rounded text-blue-800 font-bold">
+            <span><i class="fa-regular fa-calendar"></i> {{ filterDate }}</span>
+            <span><i class="fa-regular fa-clock"></i> {{ filterTimeSlot }}</span>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">車両情報 / 目的 <span class="text-red-500">*</span></label>
+            <input type="text" v-model="form.info" placeholder="例: 〇〇運送(4t)、ハイエース(出張)" class="w-full p-2 border rounded bg-gray-50 focus:bg-white">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">担当者 <span class="text-red-500">*</span></label>
+            <input type="text" v-model="form.tanto" placeholder="例: 永野" class="w-full p-2 border rounded bg-gray-50 focus:bg-white">
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-gray-700 mb-1">備考</label>
+            <textarea v-model="form.note" rows="2" placeholder="急ぎ案件など" class="w-full p-2 border rounded bg-gray-50 focus:bg-white"></textarea>
+          </div>
+        </div>
+        <div class="bg-gray-100 px-4 py-3 flex justify-end space-x-2">
+          <button @click="showModal = false" class="px-4 py-2 bg-gray-400 text-white rounded font-bold hover:bg-gray-500 transition">キャンセル</button>
+          <button @click="submitReservation" :disabled="isSubmitting || !form.info || !form.tanto" class="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition disabled:opacity-50">
+            <i class="fa-solid fa-paper-plane" v-if="!isSubmitting"></i>
+            <i class="fa-solid fa-spinner fa-spin" v-else></i> 予約確定
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <nav class="fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around text-xs font-bold text-gray-500 z-40 pb-safe">
+      <a href="index.html" class="flex flex-col items-center py-2 w-full hover:bg-blue-50 transition">
+        <i class="fa-solid fa-list-check fa-lg mb-1"></i><span>当日作業</span>
+      </a>
+      <a href="past.html" class="flex flex-col items-center py-2 w-full hover:bg-blue-50 transition">
+        <i class="fa-solid fa-magnifying-glass fa-lg mb-1"></i><span>過去検索</span>
+      </a>
+      <a href="#" class="flex flex-col items-center py-2 w-full text-blue-600 border-t-2 border-blue-600 bg-blue-50">
+        <i class="fa-solid fa-truck-ramp-box fa-lg mb-1"></i><span>車両管理</span>
+      </a>
+    </nav>
+
+  </div>
+
+  <script>
+    // ★★★ 先ほどGASで新しくデプロイしたウェブアプリのURLをここに貼り付けてください ★★★
+    const GAS_URL = "https://script.google.com/macros/s/ここにURLを入れる/exec";
+
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const vehicles = ref([]);
+        const loading = ref(true);
+        const isSubmitting = ref(false);
+        const showModal = ref(false);
+
+        // 今日の日付を初期値にする関数 (YYYY-MM-DD)
+        const getToday = () => {
+          const d = new Date();
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+
+        const filterDate = ref(getToday());
+        const filterTimeSlot = ref("午前");
+
+        // 予約フォーム用データ
+        const form = ref({
+          location: "",
+          slotNo: null,
+          info: "",
+          tanto: "",
+          note: ""
+        });
+
+        // GASからデータを取得
+        const fetchData = async () => {
+          loading.value = true;
+          try {
+            const response = await fetch(`${GAS_URL}?type=vehicle`);
+            const json = await response.json();
+            // doGetの返り値が { status: "success", data: [...] } になるように合わせています
+            if(json.data) {
+              vehicles.value = json.data;
+            } else {
+              vehicles.value = json; // 直接配列で返ってきた場合
+            }
+          } catch (error) {
+            console.error("データ取得エラー:", error);
+            alert("データの取得に失敗しました。");
+          } finally {
+            loading.value = false;
+          }
+        };
+
+        // 指定した場所・枠番号・日付・時間帯に一致するデータを1件探す
+        const getSlotData = (location, slotNo) => {
+          return vehicles.value.find(v => 
+            v.location === location && 
+            v.slotNo === slotNo &&
+            v.date === filterDate.value &&
+            v.timeSlot === filterTimeSlot.value
+          );
+        };
+
+        // 空き枠をクリックした時にモーダルを開く
+        const openModal = (location, slotNo) => {
+          form.value = {
+            location: location,
+            slotNo: slotNo,
+            info: "",
+            tanto: "",
+            note: ""
+          };
+          showModal.value = true;
+        };
+
+        // 予約をGASへ送信
+        const submitReservation = async () => {
+          isSubmitting.value = true;
+          
+          const postData = {
+            type: "vehicle_save",
+            date: filterDate.value,
+            timeSlot: filterTimeSlot.value,
+            location: form.value.location,
+            slotNo: form.value.slotNo,
+            info: form.value.info,
+            tanto: form.value.tanto,
+            note: form.value.note
+          };
+
+          try {
+            const response = await fetch(GAS_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain' },
+              body: JSON.stringify(postData)
+            });
+            const result = await response.json();
+            
+            if(result.success) {
+              // 成功したら一覧を再取得してモーダルを閉じる
+              await fetchData();
+              showModal.value = false;
+            } else {
+              alert("エラーが発生しました: " + result.error);
+            }
+          } catch (error) {
+            console.error("送信エラー:", error);
+            alert("通信エラーが発生しました。");
+          } finally {
+            isSubmitting.value = false;
+          }
+        };
+
+        // 起動時にデータ取得
+        onMounted(() => {
+          fetchData();
+        });
+
+        return {
+          vehicles, loading, isSubmitting, showModal,
+          filterDate, filterTimeSlot, form,
+          fetchData, getSlotData, openModal, submitReservation
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
