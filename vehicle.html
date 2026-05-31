@@ -10,12 +10,10 @@
   
   <style>
     body { font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif; background-color: #f3f4f6; color: #333; padding-bottom: 70px; }
-    /* iOSのSafariでボトムナビが隠れないようにするためのハック */
     .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-    /* スクロールバー非表示 */
     ::-webkit-scrollbar { display: none; }
     
-    /* 車枠のベースデザイン */
+    /* 駐車場マスのデザイン */
     .parking-slot {
       border-radius: 8px;
       padding: 10px;
@@ -28,6 +26,22 @@
     }
     .slot-empty { background-color: #e5e7eb; color: #6b7280; border: 2px dashed #9ca3af; cursor: pointer; }
     .slot-filled { background-color: #dbeafe; color: #1e3a8a; border: 2px solid #3b82f6; border-left-width: 8px; }
+
+    /* カレンダーのデザイン */
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+    .calendar-day { 
+      min-height: 50px; 
+      padding: 4px; 
+      background-color: white; 
+      border: 1px solid #e5e7eb; 
+      cursor: pointer; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+    }
+    .calendar-day.active { background-color: #eff6ff; border-color: #3b82f6; box-shadow: inset 0 0 0 1px #3b82f6; }
+    .calendar-day.other-month { background-color: #f9fafb; color: #d1d5db; }
+    .calendar-day:hover { background-color: #f3f4f6; }
   </style>
 </head>
 <body>
@@ -35,26 +49,46 @@
     
     <header class="bg-blue-800 text-white p-4 sticky top-0 z-50 shadow-md flex justify-between items-center">
       <div class="font-bold text-lg"><i class="fa-solid fa-truck-ramp-box mr-2"></i>車両・駐車場管理</div>
-      <button @click="fetchData" class="bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded text-sm transition">
-        <i class="fa-solid fa-rotate-right" :class="{'fa-spin': loading}"></i> 更新
+      <button @click="fetchData" class="bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded text-sm transition flex items-center">
+        <i class="fa-solid fa-rotate-right mr-1" :class="{'fa-spin': loading}"></i> <span>更新</span>
       </button>
     </header>
 
     <main class="p-4 max-w-4xl mx-auto">
       
-      <div class="bg-white p-4 rounded-lg shadow-md mb-6 flex space-x-4 items-end">
-        <div class="flex-1">
-          <label class="block text-xs text-gray-500 mb-1">確認する日付</label>
-          <input type="date" v-model="filterDate" class="w-full p-2 border rounded bg-gray-50 text-lg font-bold">
+      <div class="bg-white p-4 rounded-lg shadow-md mb-6">
+        <div class="flex justify-between items-center mb-4">
+          <button @click="changeMonth(-1)" class="p-2 hover:bg-gray-100 rounded text-gray-600"><i class="fa-solid fa-chevron-left"></i></button>
+          <h2 class="text-lg font-bold text-gray-800">{{ currentYear }}年 {{ currentMonth }}月</h2>
+          <button @click="changeMonth(1)" class="p-2 hover:bg-gray-100 rounded text-gray-600"><i class="fa-solid fa-chevron-right"></i></button>
         </div>
-        <div class="flex-1">
-          <label class="block text-xs text-gray-500 mb-1">時間帯</label>
-          <select v-model="filterTimeSlot" class="w-full p-2 border rounded bg-gray-50 text-lg font-bold">
-            <option value="午前">午前 (AM)</option>
-            <option value="午後">午後 (PM)</option>
-            <option value="終日">終日</option>
-          </select>
+
+        <div class="calendar-grid mb-1">
+          <div v-for="day in ['日', '月', '火', '水', '木', '金', '土']" :key="day" class="text-center text-xs font-bold text-gray-500 py-1">
+            {{ day }}
+          </div>
         </div>
+
+        <div class="calendar-grid rounded overflow-hidden border border-gray-200">
+          <div v-for="(day, index) in calendarDays" :key="index" 
+               class="calendar-day" 
+               :class="{'other-month': !day.isCurrentMonth, 'active': day.date === filterDate}"
+               @click="selectDate(day.date)">
+            <span class="text-sm font-bold" :class="{'text-red-500': day.isSunday, 'text-blue-500': day.isSaturday}">{{ day.dayNumber }}</span>
+            <div v-if="getReservationCount(day.date) > 0" class="mt-1 bg-blue-100 text-blue-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full w-full text-center truncate">
+              {{ getReservationCount(day.date) }}件
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex space-x-2 mb-6">
+        <button v-for="slot in ['午前', '午後', '終日']" :key="slot" 
+                @click="filterTimeSlot = slot"
+                class="flex-1 py-2 font-bold rounded-lg transition"
+                :class="filterTimeSlot === slot ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-50'">
+          {{ slot }}
+        </button>
       </div>
 
       <div v-if="loading" class="text-center py-10 text-gray-500 font-bold">
@@ -62,6 +96,12 @@
       </div>
 
       <div v-else>
+        <div class="text-center mb-6">
+          <span class="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-full font-bold shadow-sm">
+            <i class="fa-regular fa-calendar-check mr-1"></i> {{ filterDate }}（{{ filterTimeSlot }}）の状況
+          </span>
+        </div>
+
         <div class="mb-8">
           <h2 class="text-lg font-bold text-gray-700 border-b-2 border-gray-300 mb-3 pb-1">
             <i class="fa-solid fa-industry mr-2"></i>工場側 (5枠)
@@ -76,15 +116,13 @@
                 <div class="text-xs font-bold text-blue-600 mb-1">No.{{ n }}</div>
                 <div class="text-sm font-bold truncate">{{ getSlotData('工場側', n).info }}</div>
                 <div class="text-xs text-gray-600 flex justify-between">
-                  <span><i class="fa-solid fa-user"></i> {{ getSlotData('工場側', n).tanto }}</span>
+                  <span class="truncate"><i class="fa-solid fa-user text-gray-400"></i> {{ getSlotData('工場側', n).tanto }}</span>
                 </div>
               </div>
-              
               <div v-else class="text-center font-bold">
                 <div class="text-xs mb-1">No.{{ n }}</div>
-                <i class="fa-solid fa-square-plus fa-lg mb-1"></i><br>空き (予約)
+                <i class="fa-solid fa-square-plus fa-lg mb-1 text-gray-400"></i><br>空き
               </div>
-
             </div>
           </div>
         </div>
@@ -103,15 +141,13 @@
                 <div class="text-xs font-bold text-blue-600 mb-1">No.{{ n }}</div>
                 <div class="text-sm font-bold truncate">{{ getSlotData('本社裏', n).info }}</div>
                 <div class="text-xs text-gray-600 flex justify-between">
-                  <span><i class="fa-solid fa-user"></i> {{ getSlotData('本社裏', n).tanto }}</span>
+                  <span class="truncate"><i class="fa-solid fa-user text-gray-400"></i> {{ getSlotData('本社裏', n).tanto }}</span>
                 </div>
               </div>
-              
               <div v-else class="text-center font-bold">
                 <div class="text-xs mb-1">No.{{ n }}</div>
-                <i class="fa-solid fa-square-plus fa-lg mb-1"></i><br>空き (予約)
+                <i class="fa-solid fa-square-plus fa-lg mb-1 text-gray-400"></i><br>空き
               </div>
-
             </div>
           </div>
         </div>
@@ -126,29 +162,29 @@
           <button @click="showModal = false" class="text-white hover:text-gray-200"><i class="fa-solid fa-xmark fa-lg"></i></button>
         </div>
         <div class="p-4 space-y-4">
-          <div class="flex space-x-2 text-sm bg-blue-50 p-2 rounded text-blue-800 font-bold">
+          <div class="flex space-x-2 text-sm bg-blue-50 p-2 rounded text-blue-800 font-bold justify-center">
             <span><i class="fa-regular fa-calendar"></i> {{ filterDate }}</span>
             <span><i class="fa-regular fa-clock"></i> {{ filterTimeSlot }}</span>
           </div>
           
           <div>
             <label class="block text-sm font-bold text-gray-700 mb-1">車両情報 / 目的 <span class="text-red-500">*</span></label>
-            <input type="text" v-model="form.info" placeholder="例: 〇〇運送(4t)、ハイエース(出張)" class="w-full p-2 border rounded bg-gray-50 focus:bg-white">
+            <input type="text" v-model="form.info" placeholder="例: 〇〇運送(4t)、ハイエース(出張)" class="w-full p-2 border rounded bg-gray-50 focus:bg-white focus:border-blue-500 outline-none">
           </div>
           <div>
             <label class="block text-sm font-bold text-gray-700 mb-1">担当者 <span class="text-red-500">*</span></label>
-            <input type="text" v-model="form.tanto" placeholder="例: 永野" class="w-full p-2 border rounded bg-gray-50 focus:bg-white">
+            <input type="text" v-model="form.tanto" placeholder="例: 永野" class="w-full p-2 border rounded bg-gray-50 focus:bg-white focus:border-blue-500 outline-none">
           </div>
           <div>
             <label class="block text-sm font-bold text-gray-700 mb-1">備考</label>
-            <textarea v-model="form.note" rows="2" placeholder="急ぎ案件など" class="w-full p-2 border rounded bg-gray-50 focus:bg-white"></textarea>
+            <textarea v-model="form.note" rows="2" placeholder="急ぎ案件など" class="w-full p-2 border rounded bg-gray-50 focus:bg-white focus:border-blue-500 outline-none"></textarea>
           </div>
         </div>
         <div class="bg-gray-100 px-4 py-3 flex justify-end space-x-2">
           <button @click="showModal = false" class="px-4 py-2 bg-gray-400 text-white rounded font-bold hover:bg-gray-500 transition">キャンセル</button>
-          <button @click="submitReservation" :disabled="isSubmitting || !form.info || !form.tanto" class="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition disabled:opacity-50">
-            <i class="fa-solid fa-paper-plane" v-if="!isSubmitting"></i>
-            <i class="fa-solid fa-spinner fa-spin" v-else></i> 予約確定
+          <button @click="submitReservation" :disabled="isSubmitting || !form.info || !form.tanto" class="px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition disabled:opacity-50 flex items-center">
+            <i class="fa-solid fa-spinner fa-spin mr-1" v-if="isSubmitting"></i>
+            <i class="fa-solid fa-paper-plane mr-1" v-else></i> 予約確定
           </button>
         </div>
       </div>
@@ -161,8 +197,8 @@
       <a href="past.html" class="flex flex-col items-center py-2 w-full hover:bg-blue-50 transition">
         <i class="fa-solid fa-magnifying-glass fa-lg mb-1"></i><span>過去検索</span>
       </a>
-      <a href="#" class="flex flex-col items-center py-2 w-full text-blue-600 border-t-2 border-blue-600 bg-blue-50">
-        <i class="fa-solid fa-truck-ramp-box fa-lg mb-1"></i><span>車両管理</span>
+      <a href="tools.html" class="flex flex-col items-center py-2 w-full text-blue-600 border-t-2 border-blue-600 bg-blue-50">
+        <i class="fa-solid fa-toolbox fa-lg mb-1"></i><span>業務ツール</span>
       </a>
     </nav>
 
@@ -170,7 +206,7 @@
 
   <script>
     // ★★★ 先ほどGASで新しくデプロイしたウェブアプリのURLをここに貼り付けてください ★★★
-    const GAS_URL = "https://script.google.com/macros/s/ここにURLを入れる/exec";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbxj3L48fNq9c9o11gN9n3R/exec";
 
     const { createApp, ref, computed, onMounted } = Vue;
 
@@ -181,26 +217,104 @@
         const isSubmitting = ref(false);
         const showModal = ref(false);
 
-        // 今日の日付を初期値にする関数 (YYYY-MM-DD)
-        const getToday = () => {
-          const d = new Date();
-          const year = d.getFullYear();
-          const month = String(d.getMonth() + 1).padStart(2, '0');
-          const day = String(d.getDate()).padStart(2, '0');
+        // カレンダー用の状態管理
+        const currentDate = new Date();
+        const currentYear = ref(currentDate.getFullYear());
+        const currentMonth = ref(currentDate.getMonth() + 1);
+        
+        // 日付をYYYY-MM-DD形式にする関数
+        const formatDate = (dateObj) => {
+          const year = dateObj.getFullYear();
+          const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const day = String(dateObj.getDate()).padStart(2, '0');
           return `${year}-${month}-${day}`;
         };
 
-        const filterDate = ref(getToday());
+        const filterDate = ref(formatDate(currentDate));
         const filterTimeSlot = ref("午前");
 
-        // 予約フォーム用データ
-        const form = ref({
-          location: "",
-          slotNo: null,
-          info: "",
-          tanto: "",
-          note: ""
+        // カレンダーの日付配列を生成する算出プロパティ
+        const calendarDays = computed(() => {
+          const days = [];
+          const firstDayOfMonth = new Date(currentYear.value, currentMonth.value - 1, 1);
+          const lastDayOfMonth = new Date(currentYear.value, currentMonth.value, 0);
+          
+          // 月の最初の日の曜日（0:日曜日 〜 6:土曜日）
+          const startDayOfWeek = firstDayOfMonth.getDay();
+          
+          // 前月のはみ出し分を追加
+          const prevMonthLastDay = new Date(currentYear.value, currentMonth.value - 1, 0).getDate();
+          for (let i = startDayOfWeek - 1; i >= 0; i--) {
+            const d = new Date(currentYear.value, currentMonth.value - 2, prevMonthLastDay - i);
+            days.push({
+              date: formatDate(d),
+              dayNumber: d.getDate(),
+              isCurrentMonth: false,
+              isSunday: d.getDay() === 0,
+              isSaturday: d.getDay() === 6
+            });
+          }
+          
+          // 当月分を追加
+          for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
+            const d = new Date(currentYear.value, currentMonth.value - 1, i);
+            days.push({
+              date: formatDate(d),
+              dayNumber: i,
+              isCurrentMonth: true,
+              isSunday: d.getDay() === 0,
+              isSaturday: d.getDay() === 6
+            });
+          }
+          
+          // 翌月のはみ出し分を追加（全体が35マスまたは42マスになるように調整）
+          const totalCells = days.length > 35 ? 42 : 35;
+          const remainingCells = totalCells - days.length;
+          for (let i = 1; i <= remainingCells; i++) {
+            const d = new Date(currentYear.value, currentMonth.value, i);
+            days.push({
+              date: formatDate(d),
+              dayNumber: i,
+              isCurrentMonth: false,
+              isSunday: d.getDay() === 0,
+              isSaturday: d.getDay() === 6
+            });
+          }
+          
+          return days;
         });
+
+        // 月の変更
+        const changeMonth = (delta) => {
+          let newMonth = currentMonth.value + delta;
+          let newYear = currentYear.value;
+          if (newMonth > 12) {
+            newMonth = 1;
+            newYear++;
+          } else if (newMonth < 1) {
+            newMonth = 12;
+            newYear--;
+          }
+          currentMonth.value = newMonth;
+          currentYear.value = newYear;
+        };
+
+        // 日付の選択
+        const selectDate = (dateStr) => {
+          filterDate.value = dateStr;
+          // 選択した日付が別の月の場合はカレンダーをそちらに合わせる
+          const selectedDateObj = new Date(dateStr);
+          currentYear.value = selectedDateObj.getFullYear();
+          currentMonth.value = selectedDateObj.getMonth() + 1;
+        };
+
+        // 指定した日付の「予約件数」を取得する関数（カレンダーのバッジ用）
+        const getReservationCount = (dateStr) => {
+          return vehicles.value.filter(v => v.date === dateStr).length;
+        };
+
+        // 予約フォーム用データ
+        const form = ref({ location: "", slotNo: null, info: "", tanto: "", note: "" });
 
         // GASからデータを取得
         const fetchData = async () => {
@@ -208,21 +322,20 @@
           try {
             const response = await fetch(`${GAS_URL}?type=vehicle`);
             const json = await response.json();
-            // doGetの返り値が { status: "success", data: [...] } になるように合わせています
             if(json.data) {
               vehicles.value = json.data;
             } else {
-              vehicles.value = json; // 直接配列で返ってきた場合
+              vehicles.value = json; 
             }
           } catch (error) {
             console.error("データ取得エラー:", error);
-            alert("データの取得に失敗しました。");
+            // alert("データの取得に失敗しました。");
           } finally {
             loading.value = false;
           }
         };
 
-        // 指定した場所・枠番号・日付・時間帯に一致するデータを1件探す
+        // 指定した場所・枠番号・日付・時間帯に一致するデータを1件探す（マップ用）
         const getSlotData = (location, slotNo) => {
           return vehicles.value.find(v => 
             v.location === location && 
@@ -232,22 +345,15 @@
           );
         };
 
-        // 空き枠をクリックした時にモーダルを開く
+        // モーダルを開く
         const openModal = (location, slotNo) => {
-          form.value = {
-            location: location,
-            slotNo: slotNo,
-            info: "",
-            tanto: "",
-            note: ""
-          };
+          form.value = { location: location, slotNo: slotNo, info: "", tanto: "", note: "" };
           showModal.value = true;
         };
 
-        // 予約をGASへ送信
+        // 予約を送信
         const submitReservation = async () => {
           isSubmitting.value = true;
-          
           const postData = {
             type: "vehicle_save",
             date: filterDate.value,
@@ -258,7 +364,6 @@
             tanto: form.value.tanto,
             note: form.value.note
           };
-
           try {
             const response = await fetch(GAS_URL, {
               method: 'POST',
@@ -266,9 +371,7 @@
               body: JSON.stringify(postData)
             });
             const result = await response.json();
-            
             if(result.success) {
-              // 成功したら一覧を再取得してモーダルを閉じる
               await fetchData();
               showModal.value = false;
             } else {
@@ -282,14 +385,13 @@
           }
         };
 
-        // 起動時にデータ取得
-        onMounted(() => {
-          fetchData();
-        });
+        onMounted(() => { fetchData(); });
 
         return {
           vehicles, loading, isSubmitting, showModal,
           filterDate, filterTimeSlot, form,
+          currentYear, currentMonth, calendarDays,
+          changeMonth, selectDate, getReservationCount,
           fetchData, getSlotData, openModal, submitReservation
         };
       }
