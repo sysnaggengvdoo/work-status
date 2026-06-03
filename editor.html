@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>工程編集（管理者専用）</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; margin: 0; color: #333; padding-bottom: 20px; }
+        
+        /* ログイン画面 */
+        #login-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: #1e293b; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+        .login-box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; width: 90%; max-width: 320px; }
+        .login-box h2 { margin-top: 0; font-size: 1.2rem; color: #1d4ed8; margin-bottom: 20px; font-weight: bold; }
+        .login-box input { width: 100%; padding: 12px; font-size: 1.2rem; border: 2px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; text-align: center; letter-spacing: 0.1em; margin-bottom: 15px; outline: none; }
+        .login-box input:focus { border-color: #3b82f6; }
+        .login-box button { width: 100%; padding: 12px; background-color: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+        .login-box button:hover { background-color: #2563eb; }
+        #error-msg { color: #dc2626; font-size: 0.85rem; font-weight: bold; margin-top: 10px; display: none; }
+
+        /* メインアプリ部分 */
+        #main-app { display: none; }
+        
+        .header-container { background-color: #1d4ed8; color: white; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .title-group { display: flex; flex-direction: column; }
+        .header-container h1 { font-size: 1.1rem; font-weight: bold; margin: 0; line-height: 1.2; white-space: nowrap; }
+        .subtitle { font-size: 0.7rem; color: #d1d5db; white-space: nowrap; margin-top: 2px; }
+        .header-buttons { display: flex; gap: 6px; flex-shrink: 0; }
+        .header-btn { padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; font-weight: bold; cursor: pointer; text-decoration: none; white-space: nowrap; border: 1px solid white; display: flex; align-items: center; justify-content: center;}
+        
+        .add-btn { background-color: #f59e0b; color: white; border: none; } /* 新規追加ボタン */
+        .refresh-btn { background-color: #22c55e; color: white; }
+        .back-btn { background-color: #3b82f6; color: white; }
+
+        .main-content { padding: 8px; margin: 0 auto; max-width: 100%; }
+
+        .table-container { overflow: visible; background-color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 8px; }
+        table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 12px; }
+        th, td { border: 1px solid #e5e7eb; padding: 6px 4px; text-align: left; white-space: normal; word-wrap: break-word; overflow-wrap: break-word; vertical-align: middle; }
+        th { background-color: #f3f4f6; font-weight: bold; color: #374151; position: static; }
+        tbody tr:hover { background-color: #f0fdf4; }
+        
+        /* 列幅設定（操作グリップとボタン列を追加） */
+        th:nth-child(1) { width: 4%; text-align: center; }  /* グリップ */
+        th:nth-child(2) { width: 8%; }  /* 部署 */
+        th:nth-child(3) { width: 12%; } /* 整理No. */
+        th:nth-child(4) { width: 12%; } /* 顧客名 */
+        th:nth-child(5) { width: 25%; } /* 作業内容 */
+        th:nth-child(6) { width: 10%; } /* 担当 */
+        th:nth-child(7) { width: 12%; text-align: center;} /* 操作ボタン */
+
+        /* ドラッグ用の持ち手 */
+        .drag-handle { cursor: grab; font-size: 1.2rem; color: #9ca3af; text-align: center; }
+        .drag-handle:active { cursor: grabbing; color: #3b82f6; }
+
+        /* 各行の操作ボタン */
+        .row-btn { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; cursor: pointer; border: none; color: white; margin: 2px;}
+        .edit-btn { background-color: #3b82f6; }
+        .delete-btn { background-color: #ef4444; }
+
+        /* ==============================
+           モーダル（ポップアップ）のデザイン
+           ============================== */
+        #editModal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 10000; padding: 10px; }
+        .modal-content { background: white; padding: 20px; border-radius: 8px; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        .modal-content h3 { margin-top: 0; margin-bottom: 15px; font-size: 1.2rem; font-weight: bold; border-bottom: 2px solid #f3f4f6; padding-bottom: 8px; }
+        .input-group { margin-bottom: 12px; }
+        .input-group label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 4px; color: #4b5563; }
+        .input-group input, .input-group select, .input-group textarea { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 1rem; outline: none; }
+        .input-group input:focus, .input-group textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .modal-btn { padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; font-size: 0.95rem; }
+        .btn-cancel { background-color: #e5e7eb; color: #374151; }
+        .btn-save { background-color: #1d4ed8; color: white; }
+    </style>
+</head>
+<body>
+
+    <div id="login-screen">
+        <div class="login-box">
+            <h2>⚙️ 工程編集アクセス</h2>
+            <input type="password" id="passInput" placeholder="合言葉を入力">
+            <button onclick="checkPassword()">🔓 ロック解除</button>
+            <div id="error-msg">合言葉が違います</div>
+        </div>
+    </div>
+
+    <div id="main-app">
+        <header class="header-container">
+            <div class="title-group">
+                <h1>⚙️ 工程編集モード</h1>
+                <span class="subtitle">※ドラッグで並び替え可能</span>
+            </div>
+            
+            <div class="header-buttons">
+                <button class="header-btn add-btn" onclick="openModal('add')">➕ 新規追加</button>
+                <button class="header-btn refresh-btn" onclick="refreshData()">🔄 更新</button>
+                <a href="index.html" class="header-btn back-btn">🔙 戻る</a>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div id="loading" style="text-align: center; padding: 40px; color: #4b5563; font-weight: bold;">
+                <div class="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"></div>
+                データを読み込み中...
+            </div>
+            
+            <div class="table-container" id="tableContainer" style="display: none;">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>🔃</th> <th>部署</th>
+                            <th>整理No.</th>
+                            <th>顧客名</th>
+                            <th>作業内容</th>
+                            <th>担当</th>
+                            <th style="text-align: center;">操作</th> </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <div id="editModal">
+        <div class="modal-content">
+            <h3 id="modal-title">タスクを編集</h3>
+            <div class="input-group">
+                <label>部署</label>
+                <select id="input-dept">
+                    <option value="メンテ１">メンテ１</option>
+                    <option value="メンテ２">メンテ２</option>
+                    <option value="巻線">巻線</option>
+                    <option value="試験・技術">試験・技術</option>
+                    <option value="加工">加工</option>
+                    <option value="運搬">運搬</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>整理No.</label>
+                <input type="text" id="input-no" placeholder="例: 2500000">
+            </div>
+            <div class="input-group">
+                <label>顧客名</label>
+                <input type="text" id="input-customer" placeholder="例: 日本冶金">
+            </div>
+            <div class="input-group">
+                <label>作業内容</label>
+                <textarea id="input-task" rows="3" placeholder="作業内容を入力..."></textarea>
+            </div>
+            <div class="input-group">
+                <label>担当</label>
+                <input type="text" id="input-tanto" placeholder="例: 山田, 鈴木">
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn btn-cancel" onclick="closeModal()">キャンセル</button>
+                <button class="modal-btn btn-save" onclick="saveData()">💾 保存する</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const SECRET_PASSWORD = "sec";
+    const gasUrl = "https://script.google.com/macros/s/AKfycbwQqLYRy7JHH_orozMb9RF3fS_equHKdsImadg8MUHsVDPZ6E1f9yzgytqG2jqcxNAF/exec";
+    const CACHE_KEY = "sec_portal_cache_v36"; 
+    let globalData = [];
+    let editingId = null; // 編集中のIDを保持
+
+    // パスワードチェック
+    if (sessionStorage.getItem('isEditorUnlocked') === 'true') {
+        unlockApp();
+    }
+    function checkPassword() {
+        if (document.getElementById('passInput').value === SECRET_PASSWORD) {
+            sessionStorage.setItem('isEditorUnlocked', 'true');
+            unlockApp();
+        } else {
+            document.getElementById('error-msg').style.display = 'block';
+            document.getElementById('passInput').value = '';
+        }
+    }
+    function unlockApp() {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('main-app').style.display = 'block';
+        loadData();
+    }
+    document.getElementById('passInput').addEventListener('keypress', function(e) {
+        if (e.key === '
