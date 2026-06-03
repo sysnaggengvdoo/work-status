@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>作業指示書（全体一覧）</title>
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f8f9fa;
+      padding: 20px;
+      margin: 0;
+      color: #333;
+    }
+    .header-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    h2 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    /* 現場アプリへの戻るボタン */
+    .back-button {
+      background-color: #3b82f6;
+      color: white;
+      padding: 8px 16px;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+    .back-button:hover {
+      background-color: #2563eb;
+    }
+    #loading {
+      color: #666;
+      font-weight: bold;
+    }
+    /* スプシ風テーブルのデザイン */
+    .table-container {
+      overflow-x: auto;
+      max-height: 80vh;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      background-color: white;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 10px 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #f3f4f6;
+      font-weight: bold;
+      position: sticky;
+      top: 0; /* 縦スクロール時に見出しを固定 */
+      z-index: 1;
+    }
+    tbody tr:hover {
+      background-color: #f0fdf4; /* 行にマウスを乗せた時にうっすら色付け */
+    }
+    .status-badge {
+      padding: 4px 8px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+    /* URLリンクのボタンスタイル */
+    .link-button {
+      color: #2563eb;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header-container">
+    <h2>作業指示書（全体一覧）</h2>
+    <a href="index.html" class="back-button">現場アプリへ戻る</a>
+  </div>
+
+  <div id="loading">データを読み込み中...</div>
+  
+  <div class="table-container" style="display: none;" id="tableContainer">
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>部署</th>
+          <th>順</th>
+          <th>整理No.</th>
+          <th>顧客名</th>
+          <th>出</th>
+          <th>作業内容</th>
+          <th>担当</th>
+          <th>完了確認</th>
+          <th>備考</th>
+          <th>修理カード</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        </tbody>
+    </table>
+  </div>
+
+  <script>
+    // ★今v3アプリで使っているGASのWebアプリURLをここに貼り付けます
+    const API_URL = "【ここにGASのWebアプリURLを貼り付け】";
+
+    async function loadData() {
+      try {
+        const response = await fetch(API_URL);
+        const json = await response.json();
+        
+        // GAS側は { tasks: [...], attendance: {...} } で返してくるので、tasksを取り出す
+        const tasks = json.tasks;
+
+        if (tasks && tasks.length > 0) {
+          renderTable(tasks);
+        } else {
+          document.getElementById('loading').innerText = "表示するデータがありません。";
+        }
+      } catch (error) {
+        console.error("エラー:", error);
+        document.getElementById('loading').innerText = "データの取得に失敗しました。通信環境を確認してください。";
+      }
+    }
+
+    function renderTable(tasks) {
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = ''; // 中身をリセット
+      
+      tasks.forEach(task => {
+        let tr = document.createElement('tr');
+        
+        // 修理カードURLがある場合はリンクにする
+        let urlCell = "";
+        if (task["修理カードURL"]) {
+          urlCell = `<a href="${task["修理カードURL"]}" target="_blank" class="link-button">開く</a>`;
+        } else {
+          urlCell = `<span style="color: #ccc;">-</span>`;
+        }
+
+        tr.innerHTML = `
+          <td>${task["部署"] || ""}</td>
+          <td>${task["順"] || ""}</td>
+          <td>${task["整理No."] || ""}</td>
+          <td>${task["顧客名"] || ""}</td>
+          <td>${task["出"] || ""}</td>
+          <td>${task["作業内容"] || ""}</td>
+          <td>${task["担当"] || ""}</td>
+          <td><span class="status-badge">${task["完了確認"] || ""}</span></td>
+          <td>${task["備考"] || ""}</td>
+          <td style="text-align: center;">${urlCell}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // ローディングを消してテーブルを表示
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('tableContainer').style.display = 'block';
+    }
+
+    // 画面を開いた瞬間にデータ取得開始
+    window.onload = loadData;
+  </script>
+
+</body>
+</html>
