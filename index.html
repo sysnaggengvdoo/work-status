@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="作業指示書">
     <link rel="manifest" href="manifest.json">
-    <title>作業指示書 Web-v3.6</title>
+    <title>作業指示書 Web-v3.61</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; margin: 0; color: #333; padding-bottom: 50px; overscroll-behavior-y: none; }
@@ -15,16 +15,38 @@
         .header-container { background-color: #1d4ed8; color: white; padding: 8px; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
         .header-container h1 { text-align: center; font-size: 1.25rem; font-weight: bold; margin: 0 0 4px 0; letter-spacing: 0.05em; text-shadow: none; }
         
-        .search-box { display: flex; gap: 8px; }
-        .search-box input { flex: 1; padding: 10px; font-size: 1em; border-radius: 6px; border: none; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.1); color: black; outline: none; }
+        /* ★修正：検索窓とボタンの配置を調整 */
+        .search-box { display: flex; gap: 6px; width: 100%; align-items: center; }
+        .search-box input { flex: 1; padding: 8px 10px; font-size: 0.95em; border-radius: 6px; border: none; box-sizing: border-box; box-shadow: 0 1px 3px rgba(0,0,0,0.1); color: black; outline: none; min-width: 0; }
         .search-box input:focus { box-shadow: 0 0 0 2px #60a5fa; }
         
-        .refresh-btn { 
-            padding: 0 15px; background-color: #22c55e; color: white; border: none; border-radius: 6px; 
-            font-size: 0.875rem; font-weight: bold; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1); white-space: nowrap; transition: background-color 0.2s;
+        /* ★追加：ボタンを横並びにするコンテナ */
+        .header-buttons { display: flex; gap: 6px; flex-shrink: 0; }
+
+        /* ★追加・修正：コンパクトな共通ボタンスタイル */
+        .action-btn { 
+            padding: 8px 12px; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            font-size: 0.85rem; 
+            font-weight: bold; 
+            cursor: pointer; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+            white-space: nowrap; 
+            transition: background-color 0.2s;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+        .action-btn:active { transform: scale(0.95); }
+
+        .refresh-btn { background-color: #22c55e; }
         .refresh-btn:hover { background-color: #16a34a; }
-        .refresh-btn:active { transform: scale(0.95); }
+
+        .list-btn { background-color: #f59e0b; }
+        .list-btn:hover { background-color: #d97706; }
 
         .main-content { padding: 16px; margin: 0 auto; }
 
@@ -83,7 +105,7 @@
         }
         .control-group button { grid-column: 2; grid-row: 1 / 3; padding: 0 20px; font-size: 1.1em; border: none; border-radius: 6px; background-color: #3b82f6; color: white; cursor: pointer; font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.1); transition: background-color 0.2s; }
         .control-group button:hover { background-color: #2563eb; }
-        #loading { text-align: center; padding: 40px; color: #4b5563; font-size: 1.1em; font-weight: bold; display: none; } /* 初期表示をnoneに変更 */
+        #loading { text-align: center; padding: 40px; color: #4b5563; font-size: 1.1em; font-weight: bold; display: none; }
         
         #calc-iframe {
             display: none;
@@ -98,10 +120,14 @@
 <div id="app" class="w-full mx-auto bg-gray-100 min-h-screen relative shadow-lg">
 
     <header class="header-container" id="main-header">
-        <h1>📋 作業指示書 Web-v3.6</h1>
+        <h1>📋 作業指示書 Web-v3.61</h1>
         <div class="search-box" id="search-box">
             <input type="text" id="searchInput" placeholder="🔍 整理No、顧客名、担当で検索..." oninput="renderData()">
-            <button class="refresh-btn" onclick="refreshData()">🔄 最新に更新</button>
+            
+            <div class="header-buttons">
+                <a href="list.html" class="action-btn list-btn">📋 一覧</a>
+                <button class="action-btn refresh-btn" onclick="refreshData()">🔄 更新</button>
+            </div>
         </div>
     </header>
 
@@ -142,10 +168,7 @@
 </div>
 
 <script>
-    // ★重要：新しくデプロイしたAPIのURLに書き換えてください
     const gasUrl = "https://script.google.com/macros/s/AKfycbwQqLYRy7JHH_orozMb9RF3fS_equHKdsImadg8MUHsVDPZ6E1f9yzgytqG2jqcxNAF/exec";
-
-    // ★追加：キャッシュ保存用のキー（バージョン名を含めておくと後々安全です）
     const CACHE_KEY = "sec_portal_cache_v36";
 
     let globalData = [];
@@ -175,38 +198,33 @@
         }
     }
 
-    // ★改修：更新ボタンを押した時はキャッシュを消して強制リロード
     function refreshData() {
-        localStorage.removeItem(CACHE_KEY); // キャッシュクリア
+        localStorage.removeItem(CACHE_KEY); 
         document.getElementById('appContainer').innerHTML = '';
         document.getElementById('loading').style.display = 'block';
         document.getElementById('loading').innerHTML = '<div class="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"></div>最新情報を取得中...';
         loadData();
     }
 
-    // ★改修：キャッシュを使った高速読み込みロジック
     async function loadData() {
         const loadingEl = document.getElementById('loading');
         const cachedStr = localStorage.getItem(CACHE_KEY);
 
-        // 【ステップ1】キャッシュがあれば一瞬で画面表示
         if (cachedStr) {
             try {
                 const cachedJSON = JSON.parse(cachedStr);
                 globalData = cachedJSON.tasks || [];
                 attendanceData = cachedJSON.attendance || {};
-                loadingEl.style.display = 'none'; // ぐるぐるを非表示
-                renderData(); // 即座に描画
+                loadingEl.style.display = 'none';
+                renderData();
             } catch (e) {
                 console.warn("キャッシュのパースに失敗", e);
                 loadingEl.style.display = 'block';
             }
         } else {
-            // キャッシュがない初回のみぐるぐるを表示
             loadingEl.style.display = 'block';
         }
 
-        // 【ステップ2】裏側で最新データをGASへ取りに行く
         try {
             const response = await fetch(`${gasUrl}?_=${new Date().getTime()}`);
             const result = await response.json();
@@ -214,14 +232,13 @@
             globalData = result.tasks || [];
             attendanceData = result.attendance || {};
             
-            // 【ステップ3】最新データをキャッシュに上書き保存
             localStorage.setItem(CACHE_KEY, JSON.stringify(result));
             
             loadingEl.style.display = 'none';
-            renderData(); // 最新データでサイレント上書き描画
+            renderData(); 
         } catch (error) {
             console.error("API通信エラー:", error);
-            if (!cachedStr) { // キャッシュも通信もダメだった場合のみエラー表示
+            if (!cachedStr) { 
                 loadingEl.innerHTML = '<div style="color:red; font-weight:bold;">データの読み込みに失敗しました。電波状況を確認してください。</div>';
             }
         }
@@ -382,7 +399,6 @@
 
             const result = await response.json();
             if(result.success) {
-                // 成功したらローカルのデータとキャッシュも更新して再描画
                 const targetRow = globalData.find(row => String(row["ID"]) === String(id));
                 if(targetRow) {
                     targetRow["完了確認"] = newStatus;
@@ -390,7 +406,6 @@
                     targetRow["担当"] = newTanto;
                 }
                 
-                // ★改修：画面更新後、キャッシュ（localStorage）にも最新状態を保存
                 localStorage.setItem(CACHE_KEY, JSON.stringify({
                     tasks: globalData,
                     attendance: attendanceData
