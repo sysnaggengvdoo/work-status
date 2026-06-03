@@ -14,42 +14,62 @@
             padding-bottom: 20px; 
         }
         
-        /* ★修正：ヘッダーの高さを抑え、確実に横並びにする */
         .header-container { 
             background-color: #1d4ed8; 
             color: white; 
-            padding: 8px 12px; /* 上下の余白を少し減らす */
+            padding: 8px 12px; 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
         }
         
-        /* ★修正：タイトル文字を少し小さくして改行を防ぐ */
         .header-container h1 { 
-            font-size: 1.1rem; /* 1.25remから少し縮小 */
+            font-size: 1.1rem; 
             font-weight: bold; 
             margin: 0; 
-            white-space: nowrap; /* タイトルの改行を禁止 */
+            white-space: nowrap; 
         }
         
-        /* ★修正：戻るボタンをコンパクトにして横並びに収める */
-        .back-btn { 
-            padding: 6px 12px; /* ボタンを少し小さく */
-            background-color: #3b82f6; 
-            color: white; 
-            border: 1px solid white; /* 枠線を少し細く */
+        /* ★追加：ボタンを2つ並べるためのコンテナ */
+        .header-buttons {
+            display: flex;
+            gap: 8px; /* ボタンとボタンの隙間 */
+        }
+
+        /* 共通のボタンスタイル */
+        .header-btn { 
+            padding: 6px 12px; 
             border-radius: 4px; 
-            font-size: 0.85rem; /* ボタンの文字も少し小さく */
+            font-size: 0.85rem; 
             font-weight: bold; 
             cursor: pointer; 
             text-decoration: none; 
-            white-space: nowrap; /* ボタン内の改行を禁止 */
+            white-space: nowrap; 
             transition: all 0.2s; 
+            border: 1px solid white;
+        }
+
+        /* 更新ボタン（緑系にして目立たせる場合） */
+        .refresh-btn {
+            background-color: #22c55e;
+            color: white;
+        }
+        .refresh-btn:hover {
+            background-color: white;
+            color: #16a34a;
+            border-color: #16a34a;
+        }
+
+        /* カード表示へ戻るボタン */
+        .back-btn { 
+            background-color: #3b82f6; 
+            color: white; 
         }
         .back-btn:hover { 
             background-color: white; 
             color: #1d4ed8; 
+            border-color: #1d4ed8;
         }
 
         .main-content { padding: 8px; margin: 0 auto; max-width: 100%; }
@@ -111,7 +131,11 @@
 
     <header class="header-container">
         <h1>📋 作業一覧（閲覧用）</h1>
-        <a href="index.html" class="back-btn">🔙 カード表示</a>
+        
+        <div class="header-buttons">
+            <button onclick="refreshData()" class="header-btn refresh-btn">🔄 更新</button>
+            <a href="index.html" class="header-btn back-btn">🔙 カード表示</a>
+        </div>
     </header>
 
     <main class="main-content">
@@ -148,6 +172,15 @@
     
     const CACHE_KEY = "sec_portal_cache_v36"; 
     let globalData = [];
+
+    // ★追加：更新ボタンを押した時の処理（キャッシュを消して再読み込み）
+    function refreshData() {
+        localStorage.removeItem(CACHE_KEY); 
+        document.getElementById('tableContainer').style.display = 'none';
+        document.getElementById('noDataMessage').style.display = 'none';
+        document.getElementById('loading').style.display = 'block';
+        loadData();
+    }
 
     async function loadData() {
         const loadingEl = document.getElementById('loading');
