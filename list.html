@@ -6,25 +6,6 @@
     <title>作業指示書（全体一覧）</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; margin: 0; color: #333; padding-bottom: 20px; }
-        
-        .header-container { background-color: #1d4ed8; color: white; padding: 12px 16px; position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .header-container h1 { font-size: 1.25rem; font-weight: bold; margin: 0; }
-        
-        .search-box { display: flex; gap: 8px; width: 50%; max-width: 400px; }
-        .search-box input { flex: 1; padding: 8px 12px; font-size: 0.95em; border-radius: 6px; border: none; color: black; outline: none; }
-        
-        .refresh-btn { padding: 8px 16px; background-color: #22c55e; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: background-color 0.2s; }
-        .refresh-btn:hover { background-color: #16a34a; }
-
-        .main-content { padding: 16px; margin: 0 auto; max-width: 100%; }<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>作業指示書（全体一覧）</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; margin: 0; color: #333; padding-bottom: 70px; /* ★下部ナビの分だけ余白を確保 */ }
         
         .header-container { background-color: #1d4ed8; color: white; padding: 12px 16px; position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
@@ -100,7 +81,7 @@
 <body>
 
     <header class="header-container">
-        <h1>📋 全体一覧（テスト中）</h1>
+        <h1>📋 全体一覧（スプシ風）</h1>
         <div class="search-box">
             <input type="text" id="searchInput" placeholder="🔍 整理No、顧客名、担当で検索..." oninput="renderData()">
             <button class="refresh-btn" onclick="refreshData()">🔄 最新に更新</button>
@@ -137,109 +118,21 @@
     </main>
 
     <nav class="fixed bottom-0 left-0 right-0 w-full mx-auto bg-white border-t-2 border-gray-300 flex justify-around z-50">
-      <div onclick="window.location.href='index.html';" class="cursor-pointer flex items-center justify-center w-1/3 py-2 text-gray-
-
-        /* スプシ風テーブルの「ガチガチ」デザイン */
-        .table-container {
-            overflow-x: auto;
-            overflow-y: auto;
-            max-height: calc(100vh - 120px);
-            background-color: white;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            border-radius: 8px;
-            -webkit-overflow-scrolling: touch; /* ★iOSでのスクロールを滑らかにする */
-        }
-        table {
-            width: 100%;
-            min-width: 800px; /* ★スマホの画面幅に縮むのを完全拒否し、横スクロールを強制 */
-            border-collapse: separate; /* ★スクロール時に枠線が崩れる・消えるバグを防ぐ */
-            border-spacing: 0;
-            font-size: 14px;
-        }
-        th, td {
-            border-bottom: 1px solid #e5e7eb;
-            border-right: 1px solid #e5e7eb;
-            padding: 10px 12px;
-            text-align: left;
-            white-space: nowrap; /* ★全セルで文字の勝手な改行を禁止 */
-        }
-        th:first-child, td:first-child {
-            border-left: 1px solid #e5e7eb;
-        }
-        th {
-            background-color: #f3f4f6;
-            font-weight: bold;
-            color: #374151;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            border-top: 1px solid #e5e7eb;
-        }
-        tbody tr:hover {
-            background-color: #f0fdf4;
-        }
-        
-        /* ★「作業内容」だけは長くなるので、専用の幅を持たせて少しだけ改行を許容 */
-        .col-task {
-            min-width: 250px;
-            max-width: 350px;
-            white-space: normal; 
-            word-break: break-word;
-            line-height: 1.4;
-        }
-
-        .status-badge {
-            padding: 4px 10px;
-            border-radius: 9999px;
-            font-size: 0.85rem;
-            font-weight: bold;
-            display: inline-block;
-            text-align: center;
-            min-width: 70px;
-        }
-    </style>
-</head>
-<body>
-
-    <header class="header-container">
-        <h1>📋 作業指示書（全体一覧）</h1>
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="🔍 整理No、顧客名、担当で検索..." oninput="renderData()">
-            <button class="refresh-btn" onclick="refreshData()">🔄 最新に更新</button>
-        </div>
-    </header>
-
-    <main class="main-content">
-        <div id="loading" style="text-align: center; padding: 40px; color: #4b5563; font-weight: bold;">
-            <div class="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"></div>
-            データを読み込み中...
-        </div>
-        
-        <div class="table-container" id="tableContainer" style="display: none;">
-            <table id="dataTable">
-                <thead>
-                    <tr>
-                        <th>部署</th>
-                        <th>順</th>
-                        <th>整理No.</th>
-                        <th>顧客名</th>
-                        <th>出</th>
-                        <th class="col-task">作業内容</th>
-                        <th>担当</th>
-                        <th>完了確認</th>
-                        <th>備考</th>
-                        <th>修理カード</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    </tbody>
-            </table>
-        </div>
-        <div id="noDataMessage" style="display: none; text-align:center; padding:30px; color:#6b7280; background:white; border-radius:8px; border:1px solid #e5e7eb;">一致する指示書がありません</div>
-    </main>
+      <div onclick="window.location.href='index.html';" class="cursor-pointer flex items-center justify-center w-1/3 py-2 text-gray-500 font-bold text-lg hover:bg-gray-50 transition">
+        今日の作業
+      </div>
+      
+      <div onclick="window.location.href='past.html';" class="cursor-pointer flex items-center justify-center w-1/3 py-2 text-gray-500 border-l border-gray-200 font-bold text-lg hover:bg-gray-50 transition">
+        過去検索
+      </div>
+      
+      <div class="cursor-pointer flex items-center justify-center w-1/3 py-2 text-blue-700 bg-blue-50 font-bold text-lg border-l border-gray-200 border-t-4 border-blue-700 transition">
+        全体一覧
+      </div>
+    </nav>
 
 <script>
-    // ★いただいたv3アプリのURL
+    // いただいたv3アプリのAPI URL
     const gasUrl = "https://script.google.com/macros/s/AKfycbwQqLYRy7JHH_orozMb9RF3fS_equHKdsImadg8MUHsVDPZ6E1f9yzgytqG2jqcxNAF/exec";
     
     const CACHE_KEY = "sec_portal_list_cache";
