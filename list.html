@@ -23,21 +23,34 @@
             align-items: center; 
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
         }
+
+        /* ★追加：タイトルと推奨テキストを縦に並べるためのコンテナ */
+        .title-group {
+            display: flex;
+            flex-direction: column;
+        }
         
         .header-container h1 { 
             font-size: 1.1rem; 
             font-weight: bold; 
             margin: 0; 
+            line-height: 1.2;
             white-space: nowrap; 
         }
+
+        /* ★追加：横向き推奨テキストのデザイン */
+        .subtitle {
+            font-size: 0.7rem;
+            color: #d1d5db; /* 少し薄い色で目立ちすぎないように */
+            white-space: nowrap;
+            margin-top: 2px;
+        }
         
-        /* ★追加：ボタンを2つ並べるためのコンテナ */
         .header-buttons {
             display: flex;
-            gap: 8px; /* ボタンとボタンの隙間 */
+            gap: 8px;
         }
 
-        /* 共通のボタンスタイル */
         .header-btn { 
             padding: 6px 12px; 
             border-radius: 4px; 
@@ -48,9 +61,10 @@
             white-space: nowrap; 
             transition: all 0.2s; 
             border: 1px solid white;
+            display: flex;
+            align-items: center;
         }
 
-        /* 更新ボタン（緑系にして目立たせる場合） */
         .refresh-btn {
             background-color: #22c55e;
             color: white;
@@ -61,7 +75,6 @@
             border-color: #16a34a;
         }
 
-        /* カード表示へ戻るボタン */
         .back-btn { 
             background-color: #3b82f6; 
             color: white; 
@@ -130,7 +143,10 @@
 <body>
 
     <header class="header-container">
-        <h1>一覧（閲覧用）</h1>
+        <div class="title-group">
+            <h1>一覧（閲覧用）</h1>
+            <span class="subtitle">※横向き推奨</span>
+        </div>
         
         <div class="header-buttons">
             <button onclick="refreshData()" class="header-btn refresh-btn">🔄 更新</button>
@@ -173,7 +189,6 @@
     const CACHE_KEY = "sec_portal_cache_v36"; 
     let globalData = [];
 
-    // ★追加：更新ボタンを押した時の処理（キャッシュを消して再読み込み）
     function refreshData() {
         localStorage.removeItem(CACHE_KEY); 
         document.getElementById('tableContainer').style.display = 'none';
