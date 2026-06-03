@@ -19,39 +19,55 @@
 
         .main-content { padding: 16px; margin: 0 auto; max-width: 100%; }
 
-        /* スプシ風テーブルのデザイン */
+        /* スプシ風テーブルの「ガチガチ」デザイン */
         .table-container {
             overflow-x: auto;
-            max-height: calc(100vh - 120px); /* 画面の高さに追従して縦スクロール */
             overflow-y: auto;
-            border: 1px solid #ccc;
+            max-height: calc(100vh - 120px);
             background-color: white;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             border-radius: 8px;
+            -webkit-overflow-scrolling: touch; /* ★iOSでのスクロールを滑らかにする */
         }
         table {
             width: 100%;
-            border-collapse: collapse;
+            min-width: 800px; /* ★スマホの画面幅に縮むのを完全拒否し、横スクロールを強制 */
+            border-collapse: separate; /* ★スクロール時に枠線が崩れる・消えるバグを防ぐ */
+            border-spacing: 0;
             font-size: 14px;
-            white-space: nowrap; /* セル内の改行を防ぐ */
         }
         th, td {
-            border: 1px solid #e5e7eb;
-            padding: 8px 12px;
+            border-bottom: 1px solid #e5e7eb;
+            border-right: 1px solid #e5e7eb;
+            padding: 10px 12px;
             text-align: left;
+            white-space: nowrap; /* ★全セルで文字の勝手な改行を禁止 */
+        }
+        th:first-child, td:first-child {
+            border-left: 1px solid #e5e7eb;
         }
         th {
             background-color: #f3f4f6;
             font-weight: bold;
             color: #374151;
             position: sticky;
-            top: 0; /* 縦スクロール時に見出しを固定 */
+            top: 0;
             z-index: 10;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            border-top: 1px solid #e5e7eb;
         }
         tbody tr:hover {
-            background-color: #f0fdf4; /* 行にマウスを乗せるとうっすら緑に */
+            background-color: #f0fdf4;
         }
+        
+        /* ★「作業内容」だけは長くなるので、専用の幅を持たせて少しだけ改行を許容 */
+        .col-task {
+            min-width: 250px;
+            max-width: 350px;
+            white-space: normal; 
+            word-break: break-word;
+            line-height: 1.4;
+        }
+
         .status-badge {
             padding: 4px 10px;
             border-radius: 9999px;
@@ -88,7 +104,7 @@
                         <th>整理No.</th>
                         <th>顧客名</th>
                         <th>出</th>
-                        <th>作業内容</th>
+                        <th class="col-task">作業内容</th>
                         <th>担当</th>
                         <th>完了確認</th>
                         <th>備考</th>
@@ -103,23 +119,20 @@
     </main>
 
 <script>
-    // ★いただいたv3アプリのURLをそのまま使用しています
+    // ★いただいたv3アプリのURL
     const gasUrl = "https://script.google.com/macros/s/AKfycbwQqLYRy7JHH_orozMb9RF3fS_equHKdsImadg8MUHsVDPZ6E1f9yzgytqG2jqcxNAF/exec";
     
-    // キャッシュキー（v3とぶつからないように一覧専用の名前にしています）
     const CACHE_KEY = "sec_portal_list_cache";
     let globalData = [];
 
-    // 更新ボタンの処理
     function refreshData() {
-        localStorage.removeItem(CACHE_KEY); // キャッシュクリア
+        localStorage.removeItem(CACHE_KEY); 
         document.getElementById('tableContainer').style.display = 'none';
         document.getElementById('noDataMessage').style.display = 'none';
         document.getElementById('loading').style.display = 'block';
         loadData();
     }
 
-    // ★データ読み込みロジック（v3アプリと全く同じ処理でエラー回避）
     async function loadData() {
         const loadingEl = document.getElementById('loading');
         const cachedStr = localStorage.getItem(CACHE_KEY);
@@ -154,13 +167,11 @@
         }
     }
 
-    // ★テーブル描画ロジック（カードではなく <tr> <td> の表を作る）
     function renderData() {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
         const searchWord = document.getElementById('searchInput').value.toLowerCase();
 
-        // 検索フィルター（v3と同じ）
         const filteredData = globalData.filter(row => {
             if(!row["ID"]) return false; 
             const matchId = String(row["整理No."] || "").toLowerCase().includes(searchWord);
@@ -169,7 +180,6 @@
             return matchId || matchName || matchPerson;
         });
 
-        // データがない場合の処理
         if (filteredData.length === 0) {
             document.getElementById('tableContainer').style.display = 'none';
             document.getElementById('noDataMessage').style.display = 'block';
@@ -179,35 +189,31 @@
         document.getElementById('tableContainer').style.display = 'block';
         document.getElementById('noDataMessage').style.display = 'none';
 
-        // データをテーブルの行（tr）として追加していく
         filteredData.forEach(row => {
             const tr = document.createElement('tr');
             
-            // ステータスバッジの色分け
-            let bgColor = "#f3f4f6"; // 未着手 (グレー)
+            let bgColor = "#f3f4f6"; 
             let textColor = "#374151";
             
             if (row["完了確認"] === "完了予定") {
-                bgColor = "#fef08a"; // 黄色
+                bgColor = "#fef08a"; 
                 textColor = "#854d0e";
             } else if (row["完了確認"] === "完了" || row["完了確認"] === "繰越") {
-                bgColor = "#9ca3af"; // 濃いグレー
+                bgColor = "#9ca3af"; 
                 textColor = "white";
             }
 
-            // URLのリンク化
             let urlCell = row["修理カードURL"] 
                 ? `<a href="${row["修理カードURL"]}" target="_blank" style="color: #2563eb; text-decoration: underline; font-weight: bold;">開く</a>` 
                 : `<span style="color: #9ca3af;">-</span>`;
 
-            // 作業内容だけは長くなるので、テーブルが崩れないように少し改行を許容するスタイルにしています
             tr.innerHTML = `
                 <td>${row["部署"] || ""}</td>
                 <td>${row["順"] || ""}</td>
                 <td>${row["整理No."] || ""}</td>
                 <td>${row["顧客名"] || ""}</td>
                 <td>${row["出"] || ""}</td>
-                <td style="max-width: 350px; white-space: normal;">${row["作業内容"] || ""}</td>
+                <td class="col-task">${row["作業内容"] || ""}</td>
                 <td>${row["担当"] || ""}</td>
                 <td><span class="status-badge" style="background-color: ${bgColor}; color: ${textColor};">${row["完了確認"] || "未着手"}</span></td>
                 <td>${row["備考"] || ""}</td>
@@ -217,7 +223,6 @@
         });
     }
 
-    // 画面を開いた瞬間に実行
     window.onload = loadData;
 </script>
 
