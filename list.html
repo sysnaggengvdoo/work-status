@@ -11,18 +11,14 @@
             background-color: #f3f4f6; 
             margin: 0; 
             color: #333; 
-            padding-bottom: 70px; 
-            /* ★変更: 横スクロールを完全に禁止しない（全体を縮小表示するため） */
+            /* 下部ナビゲーションを消したので余白をなくす */
+            padding-bottom: 20px; 
         }
         
         .header-container { 
             background-color: #1d4ed8; 
             color: white; 
             padding: 12px 16px; 
-            /* ★変更: スケールが変わるとstickyがおかしくなることがあるため、必要に応じて外すか調整 */
-            position: sticky; 
-            top: 0; 
-            z-index: 100; 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
@@ -30,35 +26,43 @@
         }
         .header-container h1 { font-size: 1.25rem; font-weight: bold; margin: 0; }
         
-        .search-box { display: flex; gap: 8px; width: 50%; max-width: 400px; }
-        .search-box input { flex: 1; padding: 8px 12px; font-size: 0.95em; border-radius: 6px; border: none; color: black; outline: none; }
-        
-        .refresh-btn { padding: 8px 16px; background-color: #22c55e; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: background-color 0.2s; }
-        .refresh-btn:hover { background-color: #16a34a; }
+        /* 現場アプリに戻るボタン（ヘッダー右上） */
+        .back-btn { 
+            padding: 8px 16px; 
+            background-color: #3b82f6; /* 少し明るめの青 */
+            color: white; 
+            border: 2px solid white; /* 白い枠線で目立たせる */
+            border-radius: 6px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            text-decoration: none; /* aタグ用 */
+            white-space: nowrap; 
+            transition: all 0.2s; 
+        }
+        .back-btn:hover { 
+            background-color: white; 
+            color: #1d4ed8; 
+        }
 
-        /* ★変更: main-content の padding を少し減らす */
         .main-content { padding: 8px; margin: 0 auto; max-width: 100%; }
 
         /* スプシ風テーブルのデザイン */
         .table-container {
-            /* ★変更: テーブル自体ではなく、画面全体でスクロール・ズームさせる */
             overflow: visible; 
             background-color: white;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             border-radius: 8px;
         }
         table {
-            /* ★変更: 画面幅に強制的に収める設定 */
             width: 100%;
-            table-layout: fixed; /* 列幅を均等（または指定幅）に固定 */
-            border-collapse: collapse; /* 枠線を細くする */
-            font-size: 12px; /* ★変更: 全体が入るように基準フォントサイズを小さく */
+            table-layout: fixed;
+            border-collapse: collapse; 
+            font-size: 12px; 
         }
         th, td {
             border: 1px solid #e5e7eb;
-            padding: 6px 4px; /* ★変更: 余白を極力減らす */
+            padding: 6px 4px; 
             text-align: left;
-            /* ★変更: 文字が溢れたら改行して、何が何でも列幅内に収める */
             white-space: normal; 
             word-wrap: break-word;
             overflow-wrap: break-word;
@@ -67,27 +71,26 @@
             background-color: #f3f4f6;
             font-weight: bold;
             color: #374151;
-            /* ★変更: stickyを解除（ズーム時に挙動がおかしくなるのを防ぐため） */
             position: static; 
         }
         tbody tr:hover {
             background-color: #f0fdf4;
         }
         
-        /* ★列幅の割合指定（全10列が画面内に収まるように微調整） */
+        /* 列幅の割合指定 */
         th:nth-child(1) { width: 8%; }  /* 部署 */
         th:nth-child(2) { width: 5%; }  /* 順 */
         th:nth-child(3) { width: 12%; } /* 整理No. */
         th:nth-child(4) { width: 12%; } /* 顧客名 */
         th:nth-child(5) { width: 5%; }  /* 出 */
-        th:nth-child(6) { width: 25%; } /* 作業内容（一番広く） */
+        th:nth-child(6) { width: 25%; } /* 作業内容 */
         th:nth-child(7) { width: 10%; } /* 担当 */
         th:nth-child(8) { width: 8%; }  /* 完了確認 */
         th:nth-child(9) { width: 10%; } /* 備考 */
         th:nth-child(10) { width: 5%; } /* 修理カード */
 
         .status-badge {
-            padding: 2px 4px; /* バッジも小さく */
+            padding: 2px 4px; 
             border-radius: 4px;
             font-size: 0.75rem;
             font-weight: bold;
@@ -102,10 +105,7 @@
 
     <header class="header-container">
         <h1>📋 全体一覧</h1>
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="検索..." oninput="renderData()">
-            <button class="refresh-btn" onclick="refreshData()">🔄 更新</button>
-        </div>
+        <a href="index.html" class="back-btn">🔙 カード表示へ戻る</a>
     </header>
 
     <main class="main-content">
@@ -134,39 +134,21 @@
                     </tbody>
             </table>
         </div>
-        <div id="noDataMessage" style="display: none; text-align:center; padding:30px; color:#6b7280; background:white; border-radius:8px; border:1px solid #e5e7eb;">一致する指示書がありません</div>
+        <div id="noDataMessage" style="display: none; text-align:center; padding:30px; color:#6b7280; background:white; border-radius:8px; border:1px solid #e5e7eb;">表示するデータがありません</div>
     </main>
-
-    <nav class="fixed bottom-0 left-0 right-0 w-full mx-auto bg-white border-t-2 border-gray-300 flex justify-around z-50">
-      <div onclick="window.location.href='index.html';" class="cursor-pointer flex items-center justify-center w-1/3 py-2 text-gray-500 font-bold text-lg hover:bg-gray-50 transition">
-        今日の作業
-      </div>
-      <div onclick="window.location.href='past.html';" class="cursor-pointer flex items-center justify-center w-1/3 py-2 text-gray-500 border-l border-gray-200 font-bold text-lg hover:bg-gray-50 transition">
-        過去検索
-      </div>
-      <div class="cursor-pointer flex items-center justify-center w-1/3 py-2 text-blue-700 bg-blue-50 font-bold text-lg border-l border-gray-200 border-t-4 border-blue-700 transition">
-        全体一覧
-      </div>
-    </nav>
 
 <script>
     const gasUrl = "https://script.google.com/macros/s/AKfycbwQqLYRy7JHH_orozMb9RF3fS_equHKdsImadg8MUHsVDPZ6E1f9yzgytqG2jqcxNAF/exec";
     
-    const CACHE_KEY = "sec_portal_list_cache";
+    // index.html側（v3アプリ）とキャッシュを共有して高速表示
+    const CACHE_KEY = "sec_portal_cache_v36"; 
     let globalData = [];
-
-    function refreshData() {
-        localStorage.removeItem(CACHE_KEY); 
-        document.getElementById('tableContainer').style.display = 'none';
-        document.getElementById('noDataMessage').style.display = 'none';
-        document.getElementById('loading').style.display = 'block';
-        loadData();
-    }
 
     async function loadData() {
         const loadingEl = document.getElementById('loading');
         const cachedStr = localStorage.getItem(CACHE_KEY);
 
+        // キャッシュがあれば一瞬で表示
         if (cachedStr) {
             try {
                 const cachedJSON = JSON.parse(cachedStr);
@@ -180,6 +162,7 @@
             loadingEl.style.display = 'block';
         }
 
+        // 裏で最新データを取得
         try {
             const response = await fetch(`${gasUrl}?_=${new Date().getTime()}`);
             const result = await response.json();
@@ -200,15 +183,9 @@
     function renderData() {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
-        const searchWord = document.getElementById('searchInput').value.toLowerCase();
 
-        const filteredData = globalData.filter(row => {
-            if(!row["ID"]) return false; 
-            const matchId = String(row["整理No."] || "").toLowerCase().includes(searchWord);
-            const matchName = String(row["顧客名"] || "").toLowerCase().includes(searchWord);
-            const matchPerson = String(row["担当"] || "").toLowerCase().includes(searchWord);
-            return matchId || matchName || matchPerson;
-        });
+        // ★検索バーを消したので、全件そのまま表示するように変更
+        const filteredData = globalData.filter(row => row["ID"]);
 
         if (filteredData.length === 0) {
             document.getElementById('tableContainer').style.display = 'none';
