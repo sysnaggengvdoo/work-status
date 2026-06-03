@@ -1,179 +1,225 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>作業指示書（全体一覧）</title>
-  <style>
-    body {
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      background-color: #f8f9fa;
-      padding: 20px;
-      margin: 0;
-      color: #333;
-    }
-    .header-container {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 15px;
-    }
-    h2 {
-      margin: 0;
-      font-size: 1.5rem;
-    }
-    /* 現場アプリへの戻るボタン */
-    .back-button {
-      background-color: #3b82f6;
-      color: white;
-      padding: 8px 16px;
-      text-decoration: none;
-      border-radius: 6px;
-      font-size: 0.9rem;
-      font-weight: bold;
-    }
-    .back-button:hover {
-      background-color: #2563eb;
-    }
-    #loading {
-      color: #666;
-      font-weight: bold;
-    }
-    /* スプシ風テーブルのデザイン */
-    .table-container {
-      overflow-x: auto;
-      max-height: 80vh;
-      overflow-y: auto;
-      border: 1px solid #ccc;
-      background-color: white;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-      white-space: nowrap;
-    }
-    th, td {
-      border: 1px solid #e5e7eb;
-      padding: 10px 12px;
-      text-align: left;
-    }
-    th {
-      background-color: #f3f4f6;
-      font-weight: bold;
-      position: sticky;
-      top: 0; /* 縦スクロール時に見出しを固定 */
-      z-index: 1;
-    }
-    tbody tr:hover {
-      background-color: #f0fdf4; /* 行にマウスを乗せた時にうっすら色付け */
-    }
-    .status-badge {
-      padding: 4px 8px;
-      border-radius: 9999px;
-      font-size: 0.8rem;
-      font-weight: bold;
-    }
-    /* URLリンクのボタンスタイル */
-    .link-button {
-      color: #2563eb;
-      text-decoration: underline;
-      cursor: pointer;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>作業指示書（全体一覧）</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; margin: 0; color: #333; padding-bottom: 20px; }
+        
+        .header-container { background-color: #1d4ed8; color: white; padding: 12px 16px; position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .header-container h1 { font-size: 1.25rem; font-weight: bold; margin: 0; }
+        
+        .search-box { display: flex; gap: 8px; width: 50%; max-width: 400px; }
+        .search-box input { flex: 1; padding: 8px 12px; font-size: 0.95em; border-radius: 6px; border: none; color: black; outline: none; }
+        
+        .refresh-btn { padding: 8px 16px; background-color: #22c55e; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; white-space: nowrap; transition: background-color 0.2s; }
+        .refresh-btn:hover { background-color: #16a34a; }
+
+        .main-content { padding: 16px; margin: 0 auto; max-width: 100%; }
+
+        /* スプシ風テーブルのデザイン */
+        .table-container {
+            overflow-x: auto;
+            max-height: calc(100vh - 120px); /* 画面の高さに追従して縦スクロール */
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            background-color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-radius: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            white-space: nowrap; /* セル内の改行を防ぐ */
+        }
+        th, td {
+            border: 1px solid #e5e7eb;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f3f4f6;
+            font-weight: bold;
+            color: #374151;
+            position: sticky;
+            top: 0; /* 縦スクロール時に見出しを固定 */
+            z-index: 10;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        tbody tr:hover {
+            background-color: #f0fdf4; /* 行にマウスを乗せるとうっすら緑に */
+        }
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            display: inline-block;
+            text-align: center;
+            min-width: 70px;
+        }
+    </style>
 </head>
 <body>
 
-  <div class="header-container">
-    <h2>作業指示書（全体一覧）</h2>
-    <a href="index.html" class="back-button">現場アプリへ戻る</a>
-  </div>
+    <header class="header-container">
+        <h1>📋 作業指示書（全体一覧）</h1>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="🔍 整理No、顧客名、担当で検索..." oninput="renderData()">
+            <button class="refresh-btn" onclick="refreshData()">🔄 最新に更新</button>
+        </div>
+    </header>
 
-  <div id="loading">データを読み込み中...</div>
-  
-  <div class="table-container" style="display: none;" id="tableContainer">
-    <table id="dataTable">
-      <thead>
-        <tr>
-          <th>部署</th>
-          <th>順</th>
-          <th>整理No.</th>
-          <th>顧客名</th>
-          <th>出</th>
-          <th>作業内容</th>
-          <th>担当</th>
-          <th>完了確認</th>
-          <th>備考</th>
-          <th>修理カード</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody">
-        </tbody>
-    </table>
-  </div>
+    <main class="main-content">
+        <div id="loading" style="text-align: center; padding: 40px; color: #4b5563; font-weight: bold;">
+            <div class="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"></div>
+            データを読み込み中...
+        </div>
+        
+        <div class="table-container" id="tableContainer" style="display: none;">
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>部署</th>
+                        <th>順</th>
+                        <th>整理No.</th>
+                        <th>顧客名</th>
+                        <th>出</th>
+                        <th>作業内容</th>
+                        <th>担当</th>
+                        <th>完了確認</th>
+                        <th>備考</th>
+                        <th>修理カード</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    </tbody>
+            </table>
+        </div>
+        <div id="noDataMessage" style="display: none; text-align:center; padding:30px; color:#6b7280; background:white; border-radius:8px; border:1px solid #e5e7eb;">一致する指示書がありません</div>
+    </main>
 
-  <script>
-    // ★今v3アプリで使っているGASのWebアプリURLをここに貼り付けます
-    const API_URL = "【ここにGASのWebアプリURLを貼り付け】";
+<script>
+    // ★いただいたv3アプリのURLをそのまま使用しています
+    const gasUrl = "https://script.google.com/macros/s/AKfycbwQqLYRy7JHH_orozMb9RF3fS_equHKdsImadg8MUHsVDPZ6E1f9yzgytqG2jqcxNAF/exec";
+    
+    // キャッシュキー（v3とぶつからないように一覧専用の名前にしています）
+    const CACHE_KEY = "sec_portal_list_cache";
+    let globalData = [];
 
+    // 更新ボタンの処理
+    function refreshData() {
+        localStorage.removeItem(CACHE_KEY); // キャッシュクリア
+        document.getElementById('tableContainer').style.display = 'none';
+        document.getElementById('noDataMessage').style.display = 'none';
+        document.getElementById('loading').style.display = 'block';
+        loadData();
+    }
+
+    // ★データ読み込みロジック（v3アプリと全く同じ処理でエラー回避）
     async function loadData() {
-      try {
-        const response = await fetch(API_URL);
-        const json = await response.json();
-        
-        // GAS側は { tasks: [...], attendance: {...} } で返してくるので、tasksを取り出す
-        const tasks = json.tasks;
+        const loadingEl = document.getElementById('loading');
+        const cachedStr = localStorage.getItem(CACHE_KEY);
 
-        if (tasks && tasks.length > 0) {
-          renderTable(tasks);
+        if (cachedStr) {
+            try {
+                const cachedJSON = JSON.parse(cachedStr);
+                globalData = cachedJSON.tasks || [];
+                loadingEl.style.display = 'none';
+                renderData();
+            } catch (e) {
+                loadingEl.style.display = 'block';
+            }
         } else {
-          document.getElementById('loading').innerText = "表示するデータがありません。";
-        }
-      } catch (error) {
-        console.error("エラー:", error);
-        document.getElementById('loading').innerText = "データの取得に失敗しました。通信環境を確認してください。";
-      }
-    }
-
-    function renderTable(tasks) {
-      const tbody = document.getElementById('tableBody');
-      tbody.innerHTML = ''; // 中身をリセット
-      
-      tasks.forEach(task => {
-        let tr = document.createElement('tr');
-        
-        // 修理カードURLがある場合はリンクにする
-        let urlCell = "";
-        if (task["修理カードURL"]) {
-          urlCell = `<a href="${task["修理カードURL"]}" target="_blank" class="link-button">開く</a>`;
-        } else {
-          urlCell = `<span style="color: #ccc;">-</span>`;
+            loadingEl.style.display = 'block';
         }
 
-        tr.innerHTML = `
-          <td>${task["部署"] || ""}</td>
-          <td>${task["順"] || ""}</td>
-          <td>${task["整理No."] || ""}</td>
-          <td>${task["顧客名"] || ""}</td>
-          <td>${task["出"] || ""}</td>
-          <td>${task["作業内容"] || ""}</td>
-          <td>${task["担当"] || ""}</td>
-          <td><span class="status-badge">${task["完了確認"] || ""}</span></td>
-          <td>${task["備考"] || ""}</td>
-          <td style="text-align: center;">${urlCell}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      // ローディングを消してテーブルを表示
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('tableContainer').style.display = 'block';
+        try {
+            const response = await fetch(`${gasUrl}?_=${new Date().getTime()}`);
+            const result = await response.json();
+            
+            globalData = result.tasks || [];
+            localStorage.setItem(CACHE_KEY, JSON.stringify(result));
+            
+            loadingEl.style.display = 'none';
+            renderData(); 
+        } catch (error) {
+            console.error("API通信エラー:", error);
+            if (!cachedStr) {
+                loadingEl.innerHTML = '<div style="color:red; font-weight:bold;">データの読み込みに失敗しました。</div>';
+            }
+        }
     }
 
-    // 画面を開いた瞬間にデータ取得開始
+    // ★テーブル描画ロジック（カードではなく <tr> <td> の表を作る）
+    function renderData() {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        const searchWord = document.getElementById('searchInput').value.toLowerCase();
+
+        // 検索フィルター（v3と同じ）
+        const filteredData = globalData.filter(row => {
+            if(!row["ID"]) return false; 
+            const matchId = String(row["整理No."] || "").toLowerCase().includes(searchWord);
+            const matchName = String(row["顧客名"] || "").toLowerCase().includes(searchWord);
+            const matchPerson = String(row["担当"] || "").toLowerCase().includes(searchWord);
+            return matchId || matchName || matchPerson;
+        });
+
+        // データがない場合の処理
+        if (filteredData.length === 0) {
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('noDataMessage').style.display = 'block';
+            return;
+        }
+
+        document.getElementById('tableContainer').style.display = 'block';
+        document.getElementById('noDataMessage').style.display = 'none';
+
+        // データをテーブルの行（tr）として追加していく
+        filteredData.forEach(row => {
+            const tr = document.createElement('tr');
+            
+            // ステータスバッジの色分け
+            let bgColor = "#f3f4f6"; // 未着手 (グレー)
+            let textColor = "#374151";
+            
+            if (row["完了確認"] === "完了予定") {
+                bgColor = "#fef08a"; // 黄色
+                textColor = "#854d0e";
+            } else if (row["完了確認"] === "完了" || row["完了確認"] === "繰越") {
+                bgColor = "#9ca3af"; // 濃いグレー
+                textColor = "white";
+            }
+
+            // URLのリンク化
+            let urlCell = row["修理カードURL"] 
+                ? `<a href="${row["修理カードURL"]}" target="_blank" style="color: #2563eb; text-decoration: underline; font-weight: bold;">開く</a>` 
+                : `<span style="color: #9ca3af;">-</span>`;
+
+            // 作業内容だけは長くなるので、テーブルが崩れないように少し改行を許容するスタイルにしています
+            tr.innerHTML = `
+                <td>${row["部署"] || ""}</td>
+                <td>${row["順"] || ""}</td>
+                <td>${row["整理No."] || ""}</td>
+                <td>${row["顧客名"] || ""}</td>
+                <td>${row["出"] || ""}</td>
+                <td style="max-width: 350px; white-space: normal;">${row["作業内容"] || ""}</td>
+                <td>${row["担当"] || ""}</td>
+                <td><span class="status-badge" style="background-color: ${bgColor}; color: ${textColor};">${row["完了確認"] || "未着手"}</span></td>
+                <td>${row["備考"] || ""}</td>
+                <td style="text-align: center;">${urlCell}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 画面を開いた瞬間に実行
     window.onload = loadData;
-  </script>
+</script>
 
 </body>
 </html>
