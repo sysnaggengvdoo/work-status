@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>作業指示ポータル - SECPortalApp v4.0</title>
+  <title>作業指示ポータル - SECPortalApp v4.0 (PC Edition)</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -20,23 +20,55 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    
+    /* ドラッグ時のマウスカーソル */
+    .cursor-grab { cursor: grab; }
+    .cursor-grab:active { cursor: grabbing; }
+    
+    /* ドロップ可能エリアのハイライト用（Vueでクラス切替） */
+    .drop-zone-active {
+      border-color: #3b82f6 !important;
+      background-color: #eff6ff !important;
+    }
   </style>
 </head>
 <body class="bg-gray-100">
 
-<div id="app" class="h-screen flex flex-col md:flex-row overflow-hidden">
+<div id="app" class="h-screen flex overflow-hidden">
 
-  <div class="w-full md:w-1/3 lg:w-1/4 h-1/3 md:h-full bg-white border-r border-gray-200 flex flex-col shadow-md z-10">
+  <div class="w-1/6 h-full bg-white border-r border-gray-200 flex flex-col shadow-md z-20">
+    <div class="bg-indigo-800 text-white px-4 py-3 flex justify-between items-center shadow-md">
+      <div class="flex items-center gap-2">
+        <span class="text-lg">👥</span>
+        <h2 class="font-bold text-sm tracking-wider">本日出勤者</h2>
+      </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-3 bg-gray-50 space-y-2">
+      <p class="text-xs text-gray-500 mb-2 font-bold text-center border-b pb-2">右の枠へドラッグ＆ドロップ</p>
+      
+      <div v-for="staff in staffList" :key="staff"
+           draggable="true"
+           @dragstart="onDragStart(staff, $event)"
+           @dragend="onDragEnd"
+           class="p-2.5 bg-white border border-gray-300 rounded-lg shadow-sm cursor-grab hover:border-indigo-400 hover:shadow transition-all flex justify-between items-center group">
+        <span class="font-bold text-gray-700 text-sm">{{ staff }}</span>
+        <span class="text-gray-300 group-hover:text-indigo-400">≡</span>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="w-1/4 h-full bg-white border-r border-gray-200 flex flex-col shadow-md z-10">
     <div class="bg-gray-800 text-white px-4 py-3 flex justify-between items-center shadow-md">
       <div class="flex items-center gap-2">
         <span class="text-lg">📋</span>
-        <h2 class="font-bold tracking-wider">本日の作業一覧</h2>
+        <h2 class="font-bold tracking-wider text-sm">作業一覧</h2>
       </div>
       <span class="text-xs bg-gray-700 px-2 py-1 rounded-full text-gray-300 font-mono">{{ workList.length }}件</span>
     </div>
 
     <div class="flex-1 overflow-y-auto p-3 space-y-2 bg-gray-50">
-      
       <div v-for="item in workList" :key="item.id" 
            @click="selectItem(item)"
            :class="selectedItem && selectedItem.id === item.id ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-gray-100'"
@@ -56,30 +88,26 @@
         
         <div class="text-xs text-gray-500 flex justify-between">
           <span class="truncate">🛠 {{ item.workDetails || '詳細なし' }}</span>
-          <span class="font-bold ml-2">{{ item.mainTanto || '未定' }}</span>
+          <span class="font-bold ml-2 text-indigo-600">{{ item.mainTanto || '未定' }}</span>
         </div>
       </div>
-
     </div>
   </div>
 
 
-  <div class="w-full md:w-2/3 lg:w-3/4 h-2/3 md:h-full overflow-y-auto bg-gray-100 p-4 md:p-6">
+  <div class="flex-1 h-full overflow-y-auto bg-gray-100 p-6">
     
-    <div v-if="selectedItem" class="max-w-5xl mx-auto bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden pb-4">
-      
+    <div v-if="selectedItem" class="max-w-4xl mx-auto bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden pb-4">
       <div class="bg-gray-800 text-white px-6 py-4 flex justify-between items-center border-b border-gray-700">
         <div class="flex items-center gap-3">
           <span class="text-xl">🛠️</span>
-          <h2 class="text-lg font-bold tracking-wider font-sans">作業指示 編集</h2>
+          <h2 class="text-lg font-bold tracking-wider font-sans">作業指示 編集・アサイン</h2>
         </div>
-        <span class="text-xs bg-gray-700 px-3 py-1 rounded-full border border-gray-600 text-gray-300 font-mono">SECPortalApp v4.0</span>
       </div>
 
       <form @submit.prevent="saveData" class="p-6 bg-gray-50 space-y-6">
         
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          
+        <div class="grid grid-cols-2 gap-6">
           <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
             <h3 class="text-sm font-extrabold text-blue-600 flex items-center gap-1 border-b pb-2">
               <span>📋</span> 基本項目
@@ -87,111 +115,101 @@
             
             <div class="grid grid-cols-3 gap-3">
               <div class="col-span-2">
-                <label class="block text-xs font-bold text-gray-700 mb-1">部署・グループ <span class="text-red-500">*</span></label>
-                <select v-model="formData.department" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all">
+                <label class="block text-xs font-bold text-gray-700 mb-1">部署・グループ *</label>
+                <select v-model="formData.department" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all">
                   <option v-for="dept in departments" :key="dept" :value="dept">{{ dept }}</option>
                 </select>
               </div>
               <div>
                 <label class="block text-xs font-bold text-gray-700 mb-1">優先順</label>
-                <input type="number" v-model="formData.priority" placeholder="-" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm text-center bg-gray-50 focus:border-blue-500 focus:bg-white transition-all">
+                <input type="number" v-model="formData.priority" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm text-center focus:border-blue-500 transition-all">
               </div>
             </div>
 
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">整理No. <span class="text-red-500">*</span></label>
-                <input type="text" v-model="formData.seiriNo" placeholder="例: 260601" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm font-mono bg-gray-50 focus:border-blue-500 focus:bg-white transition-all">
+                <label class="block text-xs font-bold text-gray-700 mb-1">整理No. *</label>
+                <input type="text" v-model="formData.seiriNo" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm font-mono focus:border-blue-500 transition-all">
               </div>
               <div>
                 <label class="block text-xs font-bold text-gray-700 mb-1">出 (出力・型式)</label>
-                <input type="text" v-model="formData.output" placeholder="例: 75kW" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:border-blue-500 focus:bg-white transition-all">
+                <input type="text" v-model="formData.output" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 transition-all">
               </div>
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-gray-700 mb-1">顧客名 <span class="text-red-500">*</span></label>
-              <input type="text" v-model="formData.customer" placeholder="顧客名を入力してください" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:border-blue-500 focus:bg-white transition-all">
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold text-gray-700 mb-1">次工程</label>
-              <input type="text" v-model="formData.nextProcess" placeholder="例: 出荷試験 / 溶射皮膜剥離" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:border-blue-500 focus:bg-white transition-all">
+              <label class="block text-xs font-bold text-gray-700 mb-1">顧客名 *</label>
+              <input type="text" v-model="formData.customer" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 transition-all">
             </div>
           </div>
 
           <div class="space-y-4 flex flex-col justify-between">
-            
             <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4 flex-1">
               <h3 class="text-sm font-extrabold text-blue-600 flex items-center gap-1 border-b pb-2">
                 <span>📝</span> 指示・引継ぎ詳細
               </h3>
-              
               <div>
                 <label class="block text-xs font-bold text-gray-700 mb-1">作業内容</label>
-                <textarea v-model="formData.workDetails" rows="3" placeholder="現場への具体的な作業指示を記入..." class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:border-blue-500 focus:bg-white resize-y transition-all"></textarea>
+                <textarea v-model="formData.workDetails" rows="2" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 resize-y transition-all"></textarea>
               </div>
-
               <div>
-                <label class="block text-xs font-bold text-gray-700 mb-1">備考 (引継ぎ・進捗状況等)</label>
-                <textarea v-model="formData.notes" rows="3" placeholder="翌日のメンバーへの申し送り、または現在の進捗課題を記入..." class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:border-blue-500 focus:bg-white resize-y transition-all"></textarea>
+                <label class="block text-xs font-bold text-gray-700 mb-1">備考 (引継ぎ・進捗等)</label>
+                <textarea v-model="formData.notes" rows="2" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 resize-y transition-all"></textarea>
               </div>
             </div>
 
             <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-              <label class="block text-xs font-bold text-gray-700 mb-2">🚥 進捗ステータス (完了確認)</label>
+              <label class="block text-xs font-bold text-gray-700 mb-2">🚥 進捗ステータス</label>
               <div class="grid grid-cols-4 gap-2">
-                <button type="button" @click="setStatus('未着手')" 
-                  :class="formData.status === '未着手' ? 'bg-gray-600 text-white border-gray-600 shadow-inner' : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'"
-                  class="py-2.5 text-xs font-bold rounded-lg border-2 transition-all text-center">未着手</button>
-                <button type="button" @click="setStatus('作業中')" 
-                  :class="formData.status === '作業中' ? 'bg-yellow-400 text-yellow-900 border-yellow-500 shadow-inner' : 'bg-white text-gray-700 border-gray-200 hover:bg-yellow-50 hover:border-yellow-300'"
-                  class="py-2.5 text-xs font-bold rounded-lg border-2 transition-all text-center">作業中</button>
-                <button type="button" @click="setStatus('完了')" 
-                  :class="formData.status === '完了' ? 'bg-green-600 text-white border-green-700 shadow-inner' : 'bg-white text-gray-700 border-gray-200 hover:bg-green-50 hover:border-green-400'"
-                  class="py-2.5 text-xs font-bold rounded-lg border-2 transition-all text-center">完了</button>
-                <button type="button" @click="setStatus('繰越')" 
-                  :class="formData.status === '繰越' ? 'bg-orange-500 text-white border-orange-600 shadow-inner' : 'bg-white text-gray-700 border-gray-200 hover:bg-orange-50 hover:border-orange-300'"
-                  class="py-2.5 text-xs font-bold rounded-lg border-2 transition-all text-center">繰越</button>
+                <button type="button" @click="setStatus('未着手')" :class="formData.status === '未着手' ? 'bg-gray-600 text-white border-gray-600 shadow-inner' : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'" class="py-2 text-xs font-bold rounded-lg border-2 transition-all">未着手</button>
+                <button type="button" @click="setStatus('作業中')" :class="formData.status === '作業中' ? 'bg-yellow-400 text-yellow-900 border-yellow-500 shadow-inner' : 'bg-white text-gray-700 border-gray-200 hover:bg-yellow-50'" class="py-2 text-xs font-bold rounded-lg border-2 transition-all">作業中</button>
+                <button type="button" @click="setStatus('完了')" :class="formData.status === '完了' ? 'bg-green-600 text-white border-green-700 shadow-inner' : 'bg-white text-gray-700 border-gray-200 hover:bg-green-50'" class="py-2 text-xs font-bold rounded-lg border-2 transition-all">完了</button>
+                <button type="button" @click="setStatus('繰越')" :class="formData.status === '繰越' ? 'bg-orange-500 text-white border-orange-600 shadow-inner' : 'bg-white text-gray-700 border-gray-200 hover:bg-orange-50'" class="py-2 text-xs font-bold rounded-lg border-2 transition-all">繰越</button>
               </div>
             </div>
           </div>
         </div>
 
         <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-          <div class="flex justify-between items-center border-b pb-2 mb-3">
+          <div class="flex justify-between items-center border-b pb-2 mb-4">
             <h3 class="text-sm font-extrabold text-blue-600 flex items-center gap-1">
-              <span>👥</span> 担当者アサイン
+              <span>🎯</span> 担当者アサイン <span class="text-gray-400 font-normal text-xs ml-2">※左のリストから枠内へドラッグ＆ドロップ</span>
             </h3>
-            <span class="text-[10px] font-extrabold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">本日出勤者リスト連動</span>
           </div>
           
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div>
-              <span class="block text-[10px] uppercase font-black text-gray-400 mb-1">主担当</span>
-              <select v-model="formData.mainTanto" class="w-full p-2.5 border-2 border-blue-200 rounded-lg text-sm bg-blue-50 font-bold text-blue-800 focus:bg-white transition-all">
-                <option value="">- 未配置 -</option>
+          <div class="grid grid-cols-4 gap-4">
+            <div @dragover.prevent="dragOverTarget = 'mainTanto'" 
+                 @dragleave="dragOverTarget = null" 
+                 @drop="onDrop('mainTanto')"
+                 :class="{'drop-zone-active': dragOverTarget === 'mainTanto'}"
+                 class="border-2 border-dashed border-gray-300 rounded-xl p-3 transition-colors duration-200 relative">
+              <span class="block text-[10px] uppercase font-black text-gray-400 mb-1 text-center">主担当 (責任者)</span>
+              <select v-model="formData.mainTanto" class="w-full p-2 border-2 border-blue-200 rounded-lg text-sm bg-blue-50 font-bold text-blue-800 focus:bg-white text-center appearance-none">
+                <option value="">- ドロップ -</option>
                 <option v-for="staff in staffList" :key="staff" :value="staff">{{ staff }}</option>
               </select>
             </div>
-            <div>
-              <span class="block text-[10px] uppercase font-black text-gray-400 mb-1">副担当</span>
-              <select v-model="formData.subTanto" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white transition-all">
-                <option value="">- 未配置 -</option>
+
+            <div @dragover.prevent="dragOverTarget = 'subTanto'" @dragleave="dragOverTarget = null" @drop="onDrop('subTanto')" :class="{'drop-zone-active': dragOverTarget === 'subTanto'}" class="border-2 border-dashed border-gray-300 rounded-xl p-3 transition-colors duration-200">
+              <span class="block text-[10px] uppercase font-black text-gray-400 mb-1 text-center">副担当</span>
+              <select v-model="formData.subTanto" class="w-full p-2 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white text-center appearance-none">
+                <option value="">- ドロップ -</option>
                 <option v-for="staff in staffList" :key="staff" :value="staff">{{ staff }}</option>
               </select>
             </div>
-            <div>
-              <span class="block text-[10px] uppercase font-black text-gray-400 mb-1">担1</span>
-              <select v-model="formData.tan1" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white transition-all">
-                <option value="">- 未配置 -</option>
+
+            <div @dragover.prevent="dragOverTarget = 'tan1'" @dragleave="dragOverTarget = null" @drop="onDrop('tan1')" :class="{'drop-zone-active': dragOverTarget === 'tan1'}" class="border-2 border-dashed border-gray-300 rounded-xl p-3 transition-colors duration-200">
+              <span class="block text-[10px] uppercase font-black text-gray-400 mb-1 text-center">担 1</span>
+              <select v-model="formData.tan1" class="w-full p-2 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white text-center appearance-none">
+                <option value="">- ドロップ -</option>
                 <option v-for="staff in staffList" :key="staff" :value="staff">{{ staff }}</option>
               </select>
             </div>
-            <div>
-              <span class="block text-[10px] uppercase font-black text-gray-400 mb-1">担2</span>
-              <select v-model="formData.tan2" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white transition-all">
-                <option value="">- 未配置 -</option>
+
+            <div @dragover.prevent="dragOverTarget = 'tan2'" @dragleave="dragOverTarget = null" @drop="onDrop('tan2')" :class="{'drop-zone-active': dragOverTarget === 'tan2'}" class="border-2 border-dashed border-gray-300 rounded-xl p-3 transition-colors duration-200">
+              <span class="block text-[10px] uppercase font-black text-gray-400 mb-1 text-center">担 2</span>
+              <select v-model="formData.tan2" class="w-full p-2 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white text-center appearance-none">
+                <option value="">- ドロップ -</option>
                 <option v-for="staff in staffList" :key="staff" :value="staff">{{ staff }}</option>
               </select>
             </div>
@@ -199,21 +217,16 @@
         </div>
 
         <div class="flex justify-end gap-3 pt-2 border-t border-gray-200">
-          <button type="button" @click="selectedItem = null" class="px-6 py-2.5 text-sm font-bold bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all">
-            閉じる
-          </button>
-          <button type="submit" class="px-8 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md shadow-blue-200 transition-all flex items-center gap-2">
+          <button type="submit" class="px-10 py-3 text-base font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md shadow-blue-200 transition-all flex items-center gap-2">
             <span>💾</span> <span>スプシへ保存 (更新)</span>
           </button>
         </div>
-
       </form>
     </div>
     
-    <div v-else class="h-full flex flex-col items-center justify-center text-gray-400 space-y-4 pb-20">
+    <div v-else class="h-full flex flex-col items-center justify-center text-gray-400 space-y-4">
       <span class="text-6xl">👈</span>
-      <h2 class="text-xl font-bold">左のリストから作業指示を選択してください</h2>
-      <p class="text-sm">選択すると、ここに専用の編集画面が表示されます。</p>
+      <h2 class="text-xl font-bold">中央のリストから作業指示を選択してください</h2>
     </div>
 
   </div>
@@ -224,30 +237,53 @@
 
   createApp({
     setup() {
-      // --- 📌 マスターデータ（のちにGASから取得する部分） ---
       const departments = ['工場管理', 'メンテ1課 (GrA)', 'メンテ1課 (GrB)', 'メンテ1課 (GrC)', 'メンテ2課', '巻線課', '技術・試験課'];
-      const staffList = ['永野', '田中', '峯', '稲山', '鈴木', '佐藤', '高橋'];
+      
+      // 出勤者リスト
+      const staffList = ['永野', '田中', '峯', '稲山', '鈴木', '佐藤', '高橋', '伊藤', '渡辺'];
 
-      // --- 📋 作業リストのダミーデータ（のちにGASから取得） ---
       const workList = ref([
         { id: 1, department: 'メンテ1課 (GrA)', priority: '1', seiriNo: '260601', output: '75kW', customer: '三菱重工', nextProcess: '出荷', workDetails: 'ベアリング交換・試運転', notes: '', status: '作業中', mainTanto: '永野', subTanto: '', tan1: '', tan2: '' },
         { id: 2, department: '巻線課', priority: '2', seiriNo: '260605', output: '55kW', customer: 'プレス工業', nextProcess: 'ワニス処理', workDetails: 'ステータ巻替', notes: '部品到着待ち', status: '未着手', mainTanto: '田中', subTanto: '鈴木', tan1: '', tan2: '' },
-        { id: 3, department: '技術・試験課', priority: '', seiriNo: '260610', output: '11kW', customer: '日本酸素', nextProcess: '', workDetails: 'インパルス試験', notes: '完了。データは共有フォルダへ格納済', status: '完了', mainTanto: '峯', subTanto: '', tan1: '', tan2: '' },
-        { id: 4, department: 'メンテ2課', priority: '1', seiriNo: '260615', output: '110kW', customer: '〇〇鉄工所', nextProcess: '現地据付', workDetails: '現地での芯出し調整', notes: '明日朝イチで出発', status: '繰越', mainTanto: '稲山', subTanto: '高橋', tan1: '', tan2: '' }
+        { id: 3, department: '技術・試験課', priority: '', seiriNo: '260610', output: '11kW', customer: '日本酸素', nextProcess: '', workDetails: 'インパルス試験', notes: '完了済', status: '完了', mainTanto: '峯', subTanto: '', tan1: '', tan2: '' }
       ]);
 
-      // --- ⚙️ 画面制御用の変数 ---
-      const selectedItem = ref(null); // 現在選択されている案件
-      const formData = ref({});       // フォームに入力中のデータ
+      const selectedItem = ref(null);
+      const formData = ref({});
 
-      // 👈 リストをクリックした時の処理（選択）
+      // --- ドラッグ＆ドロップ制御用 ---
+      const draggedStaff = ref(null); // ドラッグ中のスタッフ名
+      const dragOverTarget = ref(null); // どこにホバーしているか（視覚効果用）
+
+      // ドラッグ開始時
+      const onDragStart = (staff, event) => {
+        draggedStaff.value = staff;
+        event.dataTransfer.effectAllowed = 'move';
+      };
+
+      // ドラッグ終了・キャンセル時
+      const onDragEnd = () => {
+        draggedStaff.value = null;
+        dragOverTarget.value = null;
+      };
+
+      // ドロップされた時（role = 'mainTanto' など）
+      const onDrop = (role) => {
+        if (draggedStaff.value && formData.value) {
+          // ドロップされた箇所（主担当など）にスタッフ名を代入
+          formData.value[role] = draggedStaff.value;
+        }
+        // リセット
+        draggedStaff.value = null;
+        dragOverTarget.value = null;
+      };
+
+      // リスト選択
       const selectItem = (item) => {
         selectedItem.value = item;
-        // リストのデータをフォームにコピー（ディープコピーして直接リストを書き換えないようにする）
         formData.value = JSON.parse(JSON.stringify(item));
       };
 
-      // 🚥 リスト用のステータスカラーを返す関数
       const getStatusClass = (status) => {
         if (status === '未着手') return 'bg-gray-100 text-gray-600 border-gray-300';
         if (status === '作業中') return 'bg-yellow-100 text-yellow-800 border-yellow-400';
@@ -256,43 +292,21 @@
         return 'bg-gray-100 text-gray-500 border-gray-200';
       };
 
-      // 🚥 フォーム内でステータスボタンを押したときの処理
-      const setStatus = (newStatus) => {
-        formData.value.status = newStatus;
-      };
+      const setStatus = (newStatus) => formData.value.status = newStatus;
 
-      // 💾 保存ボタンを押したときの処理
       const saveData = () => {
-        if (!formData.value.seiriNo || !formData.value.customer) {
-          alert('🚨 整理Noと顧客名は必須です！');
-          return;
-        }
-
-        // ① リスト上のデータを更新（フロントエンド側の反映）
+        if (!formData.value.seiriNo) return alert('🚨 整理Noは必須です！');
+        
         const index = workList.value.findIndex(item => item.id === formData.value.id);
-        if (index !== -1) {
-          workList.value[index] = { ...formData.value };
-        }
-
-        // ② ここに将来、GAS(doPost)へデータを送ってスプシを上書きする処理を書きます。
-        console.log('GASへ送信するデータ:', formData.value);
+        if (index !== -1) workList.value[index] = { ...formData.value };
         
-        alert(`整理No: ${formData.value.seiriNo} を保存しました！\n（裏側でスプレッドシートが更新されます）`);
-        
-        // 保存後、選択状態を解除してリスト一覧に戻る場合
-        // selectedItem.value = null;
+        alert(`保存しました！担当: ${formData.value.mainTanto}`);
       };
 
       return {
-        workList,
-        selectedItem,
-        formData,
-        departments,
-        staffList,
-        selectItem,
-        getStatusClass,
-        setStatus,
-        saveData
+        workList, selectedItem, formData, departments, staffList,
+        dragOverTarget, onDragStart, onDragEnd, onDrop, // D&D関数
+        selectItem, getStatusClass, setStatus, saveData
       };
     }
   }).mount('#app');
