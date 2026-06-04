@@ -1,297 +1,143 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <title>工程編集（管理者専用）</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <style>
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; margin: 0; color: #333; padding-bottom: 20px; }
+<div class="max-w-5xl mx-auto bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden my-6">
+  
+  <div class="bg-gray-800 text-white px-6 py-4 flex justify-between items-center border-b border-gray-700">
+    <div class="flex items-center gap-3">
+      <span class="text-xl">🛠️</span>
+      <h2 class="text-lg font-bold tracking-wider font-sans">作業指示 編集・新規発行</h2>
+    </div>
+    <span class="text-xs bg-gray-700 px-3 py-1 rounded-full border border-gray-600 text-gray-300 font-mono">SECPortalApp v4.0 Engine</span>
+  </div>
+
+  <form class="p-6 bg-gray-50 space-y-6">
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+        <h3 class="text-sm font-extrabold text-blue-600 flex items-center gap-1 border-b pb-2">
+          <span>📋</span> 基本項目
+        </h3>
         
-        /* ログイン画面 */
-        #login-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: #1e293b; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
-        .login-box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; width: 90%; max-width: 320px; }
-        .login-box h2 { margin-top: 0; font-size: 1.2rem; color: #1d4ed8; margin-bottom: 20px; font-weight: bold; }
-        .login-box input { width: 100%; padding: 12px; font-size: 1.2rem; border: 2px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; text-align: center; letter-spacing: 0.1em; margin-bottom: 15px; outline: none; }
-        .login-box input:focus { border-color: #3b82f6; }
-        .login-box button { width: 100%; padding: 12px; background-color: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
-        .login-box button:hover { background-color: #2563eb; }
-        #error-msg { color: #dc2626; font-size: 0.85rem; font-weight: bold; margin-top: 10px; display: none; }
-
-        /* メインアプリ部分 */
-        #main-app { display: none; }
-        
-        .header-container { background-color: #1d4ed8; color: white; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .title-group { display: flex; flex-direction: column; }
-        .header-container h1 { font-size: 1.1rem; font-weight: bold; margin: 0; line-height: 1.2; white-space: nowrap; }
-        .subtitle { font-size: 0.7rem; color: #d1d5db; white-space: nowrap; margin-top: 2px; }
-        .header-buttons { display: flex; gap: 6px; flex-shrink: 0; }
-        .header-btn { padding: 6px 12px; border-radius: 4px; font-size: 0.85rem; font-weight: bold; cursor: pointer; text-decoration: none; white-space: nowrap; border: 1px solid white; display: flex; align-items: center; justify-content: center;}
-        
-        .add-btn { background-color: #f59e0b; color: white; border: none; } /* 新規追加ボタン */
-        .refresh-btn { background-color: #22c55e; color: white; }
-        .back-btn { background-color: #3b82f6; color: white; }
-
-        .main-content { padding: 8px; margin: 0 auto; max-width: 100%; }
-
-        .table-container { overflow: visible; background-color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-radius: 8px; }
-        table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 12px; }
-        th, td { border: 1px solid #e5e7eb; padding: 6px 4px; text-align: left; white-space: normal; word-wrap: break-word; overflow-wrap: break-word; vertical-align: middle; }
-        th { background-color: #f3f4f6; font-weight: bold; color: #374151; position: static; }
-        tbody tr:hover { background-color: #f0fdf4; }
-        
-        /* 列幅設定（操作グリップとボタン列を追加） */
-        th:nth-child(1) { width: 4%; text-align: center; }  /* グリップ */
-        th:nth-child(2) { width: 8%; }  /* 部署 */
-        th:nth-child(3) { width: 12%; } /* 整理No. */
-        th:nth-child(4) { width: 12%; } /* 顧客名 */
-        th:nth-child(5) { width: 25%; } /* 作業内容 */
-        th:nth-child(6) { width: 10%; } /* 担当 */
-        th:nth-child(7) { width: 12%; text-align: center;} /* 操作ボタン */
-
-        /* ドラッグ用の持ち手 */
-        .drag-handle { cursor: grab; font-size: 1.2rem; color: #9ca3af; text-align: center; }
-        .drag-handle:active { cursor: grabbing; color: #3b82f6; }
-
-        /* 各行の操作ボタン */
-        .row-btn { padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; cursor: pointer; border: none; color: white; margin: 2px;}
-        .edit-btn { background-color: #3b82f6; }
-        .delete-btn { background-color: #ef4444; }
-
-        /* ==============================
-           モーダル（ポップアップ）のデザイン
-           ============================== */
-        #editModal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 10000; padding: 10px; }
-        .modal-content { background: white; padding: 20px; border-radius: 8px; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
-        .modal-content h3 { margin-top: 0; margin-bottom: 15px; font-size: 1.2rem; font-weight: bold; border-bottom: 2px solid #f3f4f6; padding-bottom: 8px; }
-        .input-group { margin-bottom: 12px; }
-        .input-group label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 4px; color: #4b5563; }
-        .input-group input, .input-group select, .input-group textarea { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 1rem; outline: none; }
-        .input-group input:focus, .input-group textarea:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); }
-        .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
-        .modal-btn { padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; font-size: 0.95rem; }
-        .btn-cancel { background-color: #e5e7eb; color: #374151; }
-        .btn-save { background-color: #1d4ed8; color: white; }
-    </style>
-</head>
-<body>
-
-    <div id="login-screen">
-        <div class="login-box">
-            <h2>⚙️ 工程編集アクセス</h2>
-            <input type="password" id="passInput" placeholder="合言葉を入力">
-            <button onclick="checkPassword()">🔓 ロック解除</button>
-            <div id="error-msg">合言葉が違います</div>
+        <div class="grid grid-cols-3 gap-3">
+          <div class="col-span-2">
+            <label class="block text-xs font-bold text-gray-700 mb-1">部署・グループ <span class="text-red-500">*</span></label>
+            <select class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition-all">
+              <option>メンテ1課 (GrA)</option>
+              <option>メンテ1課 (GrB)</option>
+              <option>メンテ2課</option>
+              <option>巻線課</option>
+              <option>技術・試験課</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">優先順</label>
+            <input type="number" placeholder="-" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm text-center bg-gray-50 focus:border-blue-500 focus:bg-white transition-all">
+          </div>
         </div>
-    </div>
 
-    <div id="main-app">
-        <header class="header-container">
-            <div class="title-group">
-                <h1>⚙️ 工程編集モード</h1>
-                <span class="subtitle">※ドラッグで並び替え可能</span>
-            </div>
-            
-            <div class="header-buttons">
-                <button class="header-btn add-btn" onclick="openModal('add')">➕ 新規追加</button>
-                <button class="header-btn refresh-btn" onclick="refreshData()">🔄 更新</button>
-                <a href="index.html" class="header-btn back-btn">🔙 戻る</a>
-            </div>
-        </header>
-
-        <main class="main-content">
-            <div id="loading" style="text-align: center; padding: 40px; color: #4b5563; font-weight: bold;">
-                <div class="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"></div>
-                データを読み込み中...
-            </div>
-            
-            <div class="table-container" id="tableContainer" style="display: none;">
-                <table id="dataTable">
-                    <thead>
-                        <tr>
-                            <th>🔃</th> <th>部署</th>
-                            <th>整理No.</th>
-                            <th>顧客名</th>
-                            <th>作業内容</th>
-                            <th>担当</th>
-                            <th style="text-align: center;">操作</th> </tr>
-                    </thead>
-                    <tbody id="tableBody">
-                        </tbody>
-                </table>
-            </div>
-        </main>
-    </div>
-
-    <div id="editModal">
-        <div class="modal-content">
-            <h3 id="modal-title">タスクを編集</h3>
-            <div class="input-group">
-                <label>部署</label>
-                <select id="input-dept">
-                    <option value="メンテ１">メンテ１</option>
-                    <option value="メンテ２">メンテ２</option>
-                    <option value="巻線">巻線</option>
-                    <option value="試験・技術">試験・技術</option>
-                    <option value="加工">加工</option>
-                    <option value="運搬">運搬</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <label>整理No.</label>
-                <input type="text" id="input-no" placeholder="例: 2500000">
-            </div>
-            <div class="input-group">
-                <label>顧客名</label>
-                <input type="text" id="input-customer" placeholder="例: 日本冶金">
-            </div>
-            <div class="input-group">
-                <label>作業内容</label>
-                <textarea id="input-task" rows="3" placeholder="作業内容を入力..."></textarea>
-            </div>
-            <div class="input-group">
-                <label>担当</label>
-                <input type="text" id="input-tanto" placeholder="例: 山田, 鈴木">
-            </div>
-            
-            <div class="modal-buttons">
-                <button class="modal-btn btn-cancel" onclick="closeModal()">キャンセル</button>
-                <button class="modal-btn btn-save" onclick="saveData()">💾 保存する</button>
-            </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">整理No. <span class="text-red-500">*</span></label>
+            <input type="text" placeholder="例: 260601" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm font-mono bg-gray-50 focus:border-blue-500 focus:bg-white transition-all">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">出 (出力・型式)</label>
+            <input type="text" placeholder="例: 75kW" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:border-blue-500 focus:bg-white transition-all">
+          </div>
         </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">顧客名 <span class="text-red-500">*</span></label>
+          <input type="text" placeholder="顧客名を入力してください" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:border-blue-500 focus:bg-white transition-all">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">次工程</label>
+          <input type="text" placeholder="例: 出荷試験 / 溶射皮膜剥離" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:border-blue-500 focus:bg-white transition-all">
+        </div>
+      </div>
+
+      <div class="space-y-4 flex flex-col justify-between">
+        
+        <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4 flex-1">
+          <h3 class="text-sm font-extrabold text-blue-600 flex items-center gap-1 border-b pb-2">
+            <span>📝</span> 指示・引継ぎ詳細
+          </h3>
+          
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">作業内容</label>
+            <textarea rows="3" placeholder="現場への具体的な作業指示を記入..." class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:border-blue-500 focus:bg-white resize-y transition-all"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-700 mb-1">備考 (引継ぎ・進捗状況等)</label>
+            <textarea rows="3" placeholder="翌日のメンバーへの申し送り、または現在の進捗課題を記入..." class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:border-blue-500 focus:bg-white resize-y transition-all"></textarea>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <label class="block text-xs font-bold text-gray-700 mb-2">🚥 進捗ステータス (完了確認)</label>
+          <div class="grid grid-cols-4 gap-2">
+            <button type="button" class="py-2.5 text-xs font-bold rounded-lg border-2 border-gray-300 bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all text-center">未着手</button>
+            <button type="button" class="py-2.5 text-xs font-bold rounded-lg border-2 border-yellow-400 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 ring-2 ring-yellow-200 transition-all text-center">作業中</button>
+            <button type="button" class="py-2.5 text-xs font-bold rounded-lg border-2 border-gray-200 bg-white text-gray-700 hover:bg-green-50 hover:border-green-500 hover:text-green-700 transition-all text-center">完了</button>
+            <button type="button" class="py-2.5 text-xs font-bold rounded-lg border-2 border-gray-200 bg-white text-gray-700 hover:bg-orange-50 hover:border-orange-400 hover:text-orange-700 transition-all text-center">繰越</button>
+          </div>
+        </div>
+      </div>
     </div>
 
-<script>
-    const SECRET_PASSWORD = "sec";
-    const gasUrl = "https://script.google.com/macros/s/AKfycbwQqLYRy7JHH_orozMb9RF3fS_equHKdsImadg8MUHsVDPZ6E1f9yzgytqG2jqcxNAF/exec";
-    const CACHE_KEY = "sec_portal_cache_v36"; 
-    let globalData = [];
-    let editingId = null; // 編集中のIDを保持
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+      <div class="flex justify-between items-center border-b pb-2 mb-3">
+        <h3 class="text-sm font-extrabold text-blue-600 flex items-center gap-1">
+          <span>👥</span> 担当者アサイン
+        </h3>
+        <span class="text-[10px] font-extrabold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">本日出勤者のみ自動連動</span>
+      </div>
+      
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div>
+          <span class="block text-[10px] uppercase font-black text-gray-400 mb-1">主担当 (工程責任)</span>
+          <select class="w-full p-2.5 border-2 border-blue-200 rounded-lg text-sm bg-blue-50 font-bold text-blue-800 focus:bg-white transition-all">
+            <option>永野 (出勤)</option>
+            <option>田中 (出勤)</option>
+            <option>峯 (出勤)</option>
+          </select>
+        </div>
+        <div>
+          <span class="block text-[10px] uppercase font-black text-gray-400 mb-1">副担当</span>
+          <select class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white transition-all">
+            <option value="">- 未配置 -</option>
+            <option>田中</option>
+            <option>峯</option>
+          </select>
+        </div>
+        <div>
+          <span class="block text-[10px] uppercase font-black text-gray-400 mb-1">担1</span>
+          <select class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white transition-all">
+            <option value="">- 未配置 -</option>
+            <option>鈴木</option>
+            <option>佐藤</option>
+          </select>
+        </div>
+        <div>
+          <span class="block text-[10px] uppercase font-black text-gray-400 mb-1">担2</span>
+          <select class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:bg-white transition-all">
+            <option value="">- 未配置 -</option>
+            <option>鈴木</option>
+            <option>佐藤</option>
+          </select>
+        </div>
+      </div>
+    </div>
 
-    // パスワードチェック
-    if (sessionStorage.getItem('isEditorUnlocked') === 'true') {
-        unlockApp();
-    }
-    function checkPassword() {
-        if (document.getElementById('passInput').value === SECRET_PASSWORD) {
-            sessionStorage.setItem('isEditorUnlocked', 'true');
-            unlockApp();
-        } else {
-            document.getElementById('error-msg').style.display = 'block';
-            document.getElementById('passInput').value = '';
-        }
-    }
-    function unlockApp() {
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('main-app').style.display = 'block';
-        loadData();
-    }
-    document.getElementById('passInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') checkPassword();
-    });
+    <div class="flex justify-end gap-3 pt-2 border-t border-gray-200">
+      <button type="button" class="px-6 py-2.5 text-sm font-bold bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all">
+        キャンセル
+      </button>
+      <button type="submit" class="px-8 py-2.5 text-sm font-bold bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md shadow-blue-200 transition-all flex items-center gap-2">
+        <span>💾</span> <span>指示書を保存 (スプシ即時上書き)</span>
+      </button>
+    </div>
 
-    function refreshData() {
-        localStorage.removeItem(CACHE_KEY); 
-        document.getElementById('tableContainer').style.display = 'none';
-        document.getElementById('loading').style.display = 'block';
-        loadData();
-    }
-
-    async function loadData() {
-        try {
-            const response = await fetch(`${gasUrl}?_=${new Date().getTime()}`);
-            const result = await response.json();
-            globalData = result.tasks.filter(row => row["ID"]) || [];
-            localStorage.setItem(CACHE_KEY, JSON.stringify(result));
-            document.getElementById('loading').style.display = 'none';
-            renderData(); 
-        } catch (error) {
-            console.error(error);
-        }
-    }
-
-    function renderData() {
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = '';
-        document.getElementById('tableContainer').style.display = 'block';
-
-        globalData.forEach(row => {
-            const tr = document.createElement('tr');
-            // 行のIDを属性に持たせる（並び替え時に使うため）
-            tr.setAttribute('data-id', row["ID"]);
-            
-            tr.innerHTML = `
-                <td><div class="drag-handle">≡</div></td>
-                <td>${row["部署"] || ""}</td>
-                <td>${row["整理No."] || ""}</td>
-                <td>${row["顧客名"] || ""}</td>
-                <td>${row["作業内容"] || ""}</td>
-                <td>${row["担当"] || ""}</td>
-                <td style="text-align: center;">
-                    <button class="row-btn edit-btn" onclick="openModal('edit', '${row["ID"]}')">📝</button>
-                    <button class="row-btn delete-btn" onclick="deleteRow('${row["ID"]}')">🗑️</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        // ★魔法のライブラリ（SortableJS）を起動して、行をドラッグ＆ドロップ可能にする
-        new Sortable(tbody, {
-            handle: '.drag-handle', // 「≡」を掴んだ時だけ動くようにする
-            animation: 150,
-            onEnd: function (evt) {
-                // 行が入れ替わった時に実行される処理
-                console.log("行が移動しました！", evt.oldIndex, "→", evt.newIndex);
-                alert("※GAS改修前のため、この並び替えはまだ保存されません。");
-            }
-        });
-    }
-
-    // モーダルを開く処理（新規追加 or 編集）
-    function openModal(mode, id = null) {
-        editingId = id;
-        document.getElementById('editModal').style.display = 'flex';
-        
-        if (mode === 'add') {
-            document.getElementById('modal-title').innerText = "➕ 新しい作業を追加";
-            document.getElementById('input-dept').value = "メンテ１";
-            document.getElementById('input-no').value = "";
-            document.getElementById('input-customer').value = "";
-            document.getElementById('input-task').value = "";
-            document.getElementById('input-tanto').value = "";
-        } else if (mode === 'edit') {
-            document.getElementById('modal-title').innerText = "📝 タスクを編集";
-            // 選択された行のデータを探してフォームに自動入力
-            const targetRow = globalData.find(row => String(row["ID"]) === String(id));
-            if(targetRow) {
-                document.getElementById('input-dept').value = targetRow["部署"] || "メンテ１";
-                document.getElementById('input-no').value = targetRow["整理No."] || "";
-                document.getElementById('input-customer').value = targetRow["顧客名"] || "";
-                document.getElementById('input-task').value = targetRow["作業内容"] || "";
-                document.getElementById('input-tanto').value = targetRow["担当"] || "";
-            }
-        }
-    }
-
-    function closeModal() {
-        document.getElementById('editModal').style.display = 'none';
-        editingId = null;
-    }
-
-    // 保存ボタンを押した時の処理（※今はデモ用）
-    function saveData() {
-        alert("【デモ機能】入力内容をGASに送信するプログラムを今後ここに作ります。\n\n・部署：" + document.getElementById('input-dept').value + "\n・内容：" + document.getElementById('input-task').value);
-        closeModal();
-    }
-
-    // 削除ボタンを押した時の処理（※今はデモ用）
-    function deleteRow(id) {
-        if(confirm("本当にこの作業指示を削除しますか？")) {
-            alert("【デモ機能】ID: " + id + " の削除命令をGASへ送信するプログラムを今後作ります。");
-        }
-    }
-</script>
-
-</body>
-</html>
+  </form>
+</div>
