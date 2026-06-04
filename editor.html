@@ -48,11 +48,11 @@
       <span class="text-[10px] bg-slate-700 px-2 py-0.5 rounded-full text-slate-300 font-mono font-bold">{{ workList.length }} 件</span>
     </div>
 
-    <div class="flex-1 overflow-y-auto custom-scrollbar p-2.5 bg-slate-100 space-y-3">
+    <div class="flex-1 overflow-y-auto custom-scrollbar p-2.5 bg-slate-100 space-y-4">
       
       <div v-for="dept in displayDepts" :key="dept">
         
-        <div class="flex justify-between items-center mb-1 pl-1">
+        <div class="flex justify-between items-center border-b-2 border-slate-200 pb-1.5 mb-2 pl-1">
           <div class="text-[11px] font-black text-slate-700 tracking-wider flex items-center gap-1">
             <span>🔹</span>
             <span>{{ dept }}</span>
@@ -64,7 +64,7 @@
           </button>
         </div>
           
-        <div class="space-y-1 mb-2.5">
+        <div class="space-y-1.5 mb-2">
           <div v-if="getWorkByDept(dept).length === 0" class="text-[9px] text-slate-400 text-center py-1.5 bg-white/60 border border-dashed border-slate-300 rounded-lg italic">
             登録されている案件はありません
           </div>
@@ -74,22 +74,25 @@
                :class="selectedItem && selectedItem.id === item.id ? 'border-blue-500 ring-1 ring-blue-200 bg-blue-50/70' : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-gray-50'"
                class="p-2 rounded-lg border cursor-pointer transition-all shadow-sm flex flex-col gap-1">
             
-            <div class="flex justify-between items-center w-full">
+            <div class="flex justify-between items-center w-full gap-2">
               <div class="text-xs font-bold text-slate-900 truncate flex items-center gap-1.5 min-w-0">
                 <span class="text-[10px] font-bold font-mono text-blue-600 bg-blue-50 border border-blue-200 px-1 py-0.5 rounded shrink-0">{{ item.seiriNo }}</span>
                 <span class="truncate tracking-tight">{{ item.customer }}</span>
                 <span v-if="item.output" class="text-[10px] font-bold text-slate-400 font-mono shrink-0">({{ item.output }})</span>
               </div>
-              <span :class="getStatusClass(item.status)" class="text-[9px] px-1.5 py-0.5 rounded font-bold border shrink-0 scale-95 origin-right tracking-wider">
-                {{ item.status }}
-              </span>
+
+              <div class="flex items-center gap-2 shrink-0">
+                <div class="text-[9px] font-black text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded shadow-sm max-w-[140px] truncate">
+                  👥 {{ getAllAssignees(item) }}
+                </div>
+                <span :class="getStatusClass(item.status)" class="text-[9px] px-1.5 py-0.5 rounded font-bold border shrink-0 tracking-wider">
+                  {{ item.status }}
+                </span>
+              </div>
             </div>
             
-            <div class="flex justify-between items-center w-full text-[11px] text-slate-500">
-              <span class="truncate pr-4 font-medium text-slate-600">🛠 {{ item.workDetails || '詳細未入力' }}</span>
-              <div class="shrink-0 text-[9px] font-black text-indigo-700 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded shadow-sm">
-                主:{{ item.mainTanto || '未定' }}
-              </div>
+            <div class="w-full text-[11px] text-slate-500 truncate mt-0.5">
+              <span class="font-medium text-slate-600">🛠 {{ item.workDetails || '詳細未入力' }}</span>
             </div>
 
           </div>
@@ -300,7 +303,7 @@
       ]);
 
       const workList = ref([
-        { id: 1, department: 'メンテ１課', priority: '1', seiriNo: '260601', output: '75kW', customer: '三菱重工', nextProcess: '出荷', workDetails: 'ベアリング交換・試運転', notes: '', status: '作業中', mainTanto: '永野', subTanto: '', tan1: '', tan2: '' },
+        { id: 1, department: 'メンテ１課', priority: '1', seiriNo: '260601', output: '75kW', customer: '三菱重工', nextProcess: '出荷', workDetails: 'ベアリング交換・試運転', notes: '', status: '作業中', mainTanto: '永野', subTanto: '', tan1: '田中', tan2: '' },
         { id: 2, department: 'メンテ２課', priority: '2', seiriNo: '260605', output: '55kW', customer: 'プレス工業', nextProcess: 'ワニス処理', workDetails: 'ステータ巻替', notes: '部品到着待ち', status: '未着手', mainTanto: '田中', subTanto: '鈴木', tan1: '', tan2: '' },
         { id: 3, department: '試験・技術部', priority: '', seiriNo: '260610', output: '11kW', customer: '日本酸素', nextProcess: '', workDetails: 'インパルス試験', notes: '完了済', status: '完了', mainTanto: '峯', subTanto: '', tan1: '', tan2: '' }
       ]);
@@ -361,6 +364,12 @@
         formData.value = JSON.parse(JSON.stringify(newItem));
       };
 
+      // ★追加：アサインされているメンバーを抽出してカンマでつなぐ関数
+      const getAllAssignees = (item) => {
+        const list = [item.mainTanto, item.subTanto, item.tan1, item.tan2].filter(Boolean); // 空文字を排除
+        return list.length > 0 ? list.join(', ') : '未定';
+      };
+
       const getWorkByDept = (dept) => {
         return workList.value.filter(w => w.department === dept);
       };
@@ -408,7 +417,7 @@
         dragOverTarget, isDragging, onDragStart, onDragEnd, onDrop, 
         selectItem, createNewItem, getStatusClass, setStatus, saveData,
         getStaffByDeptAndStatus, getStaffByStatus, getStaffCountByStatus,
-        getWorkByDept
+        getWorkByDept, getAllAssignees
       };
     }
   }).mount('#app');
