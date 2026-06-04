@@ -188,4 +188,110 @@
         loadData();
     }
     document.getElementById('passInput').addEventListener('keypress', function(e) {
-        if (e.key === '
+        if (e.key === 'Enter') checkPassword();
+    });
+
+    function refreshData() {
+        localStorage.removeItem(CACHE_KEY); 
+        document.getElementById('tableContainer').style.display = 'none';
+        document.getElementById('loading').style.display = 'block';
+        loadData();
+    }
+
+    async function loadData() {
+        try {
+            const response = await fetch(`${gasUrl}?_=${new Date().getTime()}`);
+            const result = await response.json();
+            globalData = result.tasks.filter(row => row["ID"]) || [];
+            localStorage.setItem(CACHE_KEY, JSON.stringify(result));
+            document.getElementById('loading').style.display = 'none';
+            renderData(); 
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    function renderData() {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        document.getElementById('tableContainer').style.display = 'block';
+
+        globalData.forEach(row => {
+            const tr = document.createElement('tr');
+            // 行のIDを属性に持たせる（並び替え時に使うため）
+            tr.setAttribute('data-id', row["ID"]);
+            
+            tr.innerHTML = `
+                <td><div class="drag-handle">≡</div></td>
+                <td>${row["部署"] || ""}</td>
+                <td>${row["整理No."] || ""}</td>
+                <td>${row["顧客名"] || ""}</td>
+                <td>${row["作業内容"] || ""}</td>
+                <td>${row["担当"] || ""}</td>
+                <td style="text-align: center;">
+                    <button class="row-btn edit-btn" onclick="openModal('edit', '${row["ID"]}')">📝</button>
+                    <button class="row-btn delete-btn" onclick="deleteRow('${row["ID"]}')">🗑️</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // ★魔法のライブラリ（SortableJS）を起動して、行をドラッグ＆ドロップ可能にする
+        new Sortable(tbody, {
+            handle: '.drag-handle', // 「≡」を掴んだ時だけ動くようにする
+            animation: 150,
+            onEnd: function (evt) {
+                // 行が入れ替わった時に実行される処理
+                console.log("行が移動しました！", evt.oldIndex, "→", evt.newIndex);
+                alert("※GAS改修前のため、この並び替えはまだ保存されません。");
+            }
+        });
+    }
+
+    // モーダルを開く処理（新規追加 or 編集）
+    function openModal(mode, id = null) {
+        editingId = id;
+        document.getElementById('editModal').style.display = 'flex';
+        
+        if (mode === 'add') {
+            document.getElementById('modal-title').innerText = "➕ 新しい作業を追加";
+            document.getElementById('input-dept').value = "メンテ１";
+            document.getElementById('input-no').value = "";
+            document.getElementById('input-customer').value = "";
+            document.getElementById('input-task').value = "";
+            document.getElementById('input-tanto').value = "";
+        } else if (mode === 'edit') {
+            document.getElementById('modal-title').innerText = "📝 タスクを編集";
+            // 選択された行のデータを探してフォームに自動入力
+            const targetRow = globalData.find(row => String(row["ID"]) === String(id));
+            if(targetRow) {
+                document.getElementById('input-dept').value = targetRow["部署"] || "メンテ１";
+                document.getElementById('input-no').value = targetRow["整理No."] || "";
+                document.getElementById('input-customer').value = targetRow["顧客名"] || "";
+                document.getElementById('input-task').value = targetRow["作業内容"] || "";
+                document.getElementById('input-tanto').value = targetRow["担当"] || "";
+            }
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('editModal').style.display = 'none';
+        editingId = null;
+    }
+
+    // 保存ボタンを押した時の処理（※今はデモ用）
+    function saveData() {
+        alert("【デモ機能】入力内容をGASに送信するプログラムを今後ここに作ります。\n\n・部署：" + document.getElementById('input-dept').value + "\n・内容：" + document.getElementById('input-task').value);
+        closeModal();
+    }
+
+    // 削除ボタンを押した時の処理（※今はデモ用）
+    function deleteRow(id) {
+        if(confirm("本当にこの作業指示を削除しますか？")) {
+            alert("【デモ機能】ID: " + id + " の削除命令をGASへ送信するプログラムを今後作ります。");
+        }
+    }
+</script>
+
+</body>
+</html>
