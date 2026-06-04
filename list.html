@@ -7,11 +7,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { 
-            font-family: 'Helvetica Neue', Arial, sans-serif; 
+            /* ★変更：日本語が美しく読みやすいフォント指定（ヒラギノ、メイリオ優先） */
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Meiryo', sans-serif; 
             background-color: #f3f4f6; 
             margin: 0; 
             color: #333; 
             padding-bottom: 20px; 
+            letter-spacing: 0.02em; /* 文字間隔を少し広げて視認性アップ */
         }
         
         .header-container { 
@@ -24,7 +26,6 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); 
         }
 
-        /* ★追加：タイトルと推奨テキストを縦に並べるためのコンテナ */
         .title-group {
             display: flex;
             flex-direction: column;
@@ -38,10 +39,9 @@
             white-space: nowrap; 
         }
 
-        /* ★追加：横向き推奨テキストのデザイン */
         .subtitle {
             font-size: 0.7rem;
-            color: #d1d5db; /* 少し薄い色で目立ちすぎないように */
+            color: #d1d5db; 
             white-space: nowrap;
             margin-top: 2px;
         }
@@ -93,28 +93,42 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
             border-radius: 8px;
         }
+        
         table {
             width: 100%;
             table-layout: fixed;
             border-collapse: collapse; 
-            font-size: 12px; 
+            font-size: 13px; /* ★変更：12pxだと少し小さいため13pxに拡大 */
         }
+        
         th, td {
             border: 1px solid #e5e7eb;
-            padding: 6px 4px; 
+            padding: 8px 4px; /* ★変更：上下の余白を少し広げて窮屈さを解消 */
             text-align: left;
             white-space: normal; 
             word-wrap: break-word;
             overflow-wrap: break-word;
+            vertical-align: middle;
         }
+        
         th {
             background-color: #f3f4f6;
             font-weight: bold;
             color: #374151;
             position: static; 
+            text-align: center; /* 見出しは中央揃えの方が見栄えが良いです */
         }
+
+        /* ★追加：スプシ風のストライプ（互い違い）背景色 */
+        tbody tr:nth-child(odd) {
+            background-color: #ffffff; /* 奇数行は白 */
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f8fafc; /* 偶数行はごく薄い青みがかったグレー */
+        }
+        
         tbody tr:hover {
-            background-color: #f0fdf4;
+            background-color: #f0fdf4; /* ホバー時は薄い緑色 */
         }
         
         th:nth-child(1) { width: 8%; }
@@ -129,7 +143,7 @@
         th:nth-child(10) { width: 5%; }
 
         .status-badge {
-            padding: 2px 4px; 
+            padding: 3px 4px; 
             border-radius: 4px;
             font-size: 0.75rem;
             font-weight: bold;
@@ -266,7 +280,7 @@
 
             tr.innerHTML = `
                 <td>${row["部署"] || ""}</td>
-                <td>${row["順"] || ""}</td>
+                <td style="text-align: center;">${row["順"] || ""}</td>
                 <td>${row["整理No."] || ""}</td>
                 <td>${row["顧客名"] || ""}</td>
                 <td>${row["出"] || ""}</td>
