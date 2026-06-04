@@ -48,31 +48,45 @@
       <span class="text-xs bg-gray-700 px-2 py-1 rounded-full text-gray-300 font-mono">{{ workList.length }}件</span>
     </div>
 
-    <div class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 bg-gray-100">
-      <div v-for="item in workList" :key="item.id" 
-           @click="selectItem(item)"
-           :class="selectedItem && selectedItem.id === item.id ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-gray-50'"
-           class="p-4 rounded-xl border cursor-pointer transition-all shadow-sm">
-        
-        <div class="flex justify-between items-center mb-1.5">
-          <span class="text-xs font-bold text-gray-500">
-            {{ item.department }} <span class="mx-1 text-gray-300">|</span> <span class="text-blue-600 font-mono text-sm">{{ item.seiriNo }}</span>
-          </span>
-          <span :class="getStatusClass(item.status)" class="text-[10px] px-2 py-0.5 rounded font-bold border">
-            {{ item.status }}
-          </span>
-        </div>
-        
-        <div class="font-black text-gray-800 text-base mb-2 truncate">{{ item.customer }}</div>
-        
-        <div class="flex justify-between items-end">
-          <span class="text-xs text-gray-600 truncate pr-2">🛠 {{ item.workDetails || '詳細未入力' }}</span>
-          <div class="shrink-0 flex items-center gap-1.5 bg-gray-100 border border-gray-200 px-2 py-1 rounded-md">
-            <span class="text-[9px] text-gray-500 font-bold">主担当</span>
-            <span class="font-bold text-indigo-700 text-xs">{{ item.mainTanto || '未定' }}</span>
+    <div class="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-100 space-y-4">
+      
+      <div v-for="dept in displayDepts" :key="dept">
+        <div v-if="getWorkByDept(dept).length > 0">
+          <div class="text-xs font-black text-indigo-950 mb-1.5 pl-1 tracking-wider flex items-center gap-1">
+            <span>🔹</span>
+            <span>{{ dept }}</span>
+            <span class="text-[10px] font-mono font-normal text-gray-400">({{ getWorkByDept(dept).length }}件)</span>
+          </div>
+          
+          <div class="space-y-1.5 mb-3">
+            <div v-for="item in getWorkByDept(dept)" :key="item.id" 
+                 @click="selectItem(item)"
+                 :class="selectedItem && selectedItem.id === item.id ? 'border-blue-500 ring-2 ring-blue-200 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-gray-50'"
+                 class="p-2.5 rounded-xl border cursor-pointer transition-all shadow-sm flex flex-col gap-1">
+              
+              <div class="flex justify-between items-center w-full">
+                <div class="text-sm font-black text-gray-800 truncate flex items-center gap-1.5 min-w-0">
+                  <span class="text-[11px] font-bold font-mono text-blue-600 bg-blue-50/60 border border-blue-200 px-1.5 py-0.5 rounded shrink-0">{{ item.seiriNo }}</span>
+                  <span class="truncate">{{ item.customer }}</span>
+                  <span v-if="item.output" class="text-xs font-bold text-gray-400 font-mono shrink-0">({{ item.output }})</span>
+                </div>
+                <span :class="getStatusClass(item.status)" class="text-[9px] px-1.5 py-0.5 rounded font-bold border shrink-0 scale-95 origin-right">
+                  {{ item.status }}
+                </span>
+              </div>
+              
+              <div class="flex justify-between items-center w-full text-xs text-gray-500">
+                <span class="truncate pr-4 font-medium">🛠 {{ item.workDetails || '詳細未入力' }}</span>
+                <div class="shrink-0 text-[10px] font-black text-indigo-700 bg-indigo-50 border border-indigo-200/60 px-2 py-0.5 rounded-md shadow-sm">
+                  主: {{ item.mainTanto || '未定' }}
+                </div>
+              </div>
+
+            </div>
           </div>
         </div>
       </div>
+      
     </div>
   </div>
 
@@ -253,14 +267,14 @@
       // 🛠 部署マスター（永野さん指定の順序に完全リニューアル）
       const displayDepts = ['工場管理', 'メンテ１課', 'メンテ２課', 'メンテ３課', 'メンテ４課', '試験・技術部'];
 
-      // 👥 詳細な人員マスタデータ（のちにGASの出勤マスタAPIと完全連動する構造）
+      // 👥 詳細な人員マスタデータ
       const memberList = ref([
         { name: '永野', dept: '工場管理', status: '出勤' },
         { name: '稲山', dept: '工場管理', status: '出勤' },
         { name: '田中', dept: 'メンテ１課', status: '出勤' },
-        { name: '伊藤', dept: 'メンテ１課', status: '休暇' }, // 休暇
+        { name: '伊藤', dept: 'メンテ１課', status: '休暇' },
         { name: '鈴木', dept: 'メンテ２課', status: '出勤' },
-        { name: '渡辺', dept: 'メンテ２課', status: '休暇' }, // 休暇
+        { name: '渡辺', dept: 'メンテ２課', status: '休暇' },
         { name: '佐藤', dept: 'メンテ３課', status: '出勤' },
         { name: '小林', dept: 'メンテ３課', status: '出勤' },
         { name: '高橋', dept: 'メンテ４課', status: '出勤' },
@@ -310,12 +324,17 @@
         formData.value = JSON.parse(JSON.stringify(item));
       };
 
-      // 左カラム用：指定部署 × 指定ステータス（出勤）のメンバー抽出
+      // ★左カラム用：指定部署の作業指示を抽出（今回追加）
+      const getWorkByDept = (dept) => {
+        return workList.value.filter(w => w.department === dept);
+      };
+
+      // 右カラム用：指定部署 × 指定ステータス（出勤）のメンバー抽出
       const getStaffByDeptAndStatus = (dept, status) => {
         return memberList.value.filter(m => m.dept === dept && m.status === status);
       };
 
-      // 左カラム用：指定ステータス（休暇）のメンバー一括抽出
+      // 右カラム用：指定ステータス（休暇）のメンバー一括抽出
       const getStaffByStatus = (status) => {
         return memberList.value.filter(m => m.status === status);
       };
@@ -348,7 +367,8 @@
         workList, selectedItem, formData, displayDepts, memberList,
         dragOverTarget, isDragging, onDragStart, onDragEnd, onDrop, 
         selectItem, getStatusClass, setStatus, saveData,
-        getStaffByDeptAndStatus, getStaffByStatus, getStaffCountByStatus
+        getStaffByDeptAndStatus, getStaffByStatus, getStaffCountByStatus,
+        getWorkByDept
       };
     }
   }).mount('#app');
