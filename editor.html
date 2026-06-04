@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>作業指示ポータル - SECPortalApp v4.0 (PC Edition)</title>
+  <title>作業指示ポータル - SECPortalApp v4.0 (PC Premium Edition)</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -18,22 +18,18 @@
       background-color: #e2e8f0; 
     }
 
-    /* 中央の作業一覧用の美しいスクロールバー */
-    .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+    /* 各カラム用のスマートなスクロールバー */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-    /* 左側の出勤者はスクロールできるが、バーは見せない（スッキリさせるため） */
-    .hide-scrollbar::-webkit-scrollbar { display: none; }
-    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
     /* ドラッグ＆ドロップ関連の視覚効果 */
     .cursor-grab { cursor: grab; }
     .cursor-grab:active { cursor: grabbing; }
     
     .drop-zone { transition: all 0.2s ease; }
-    /* ドラッグ開始時に枠を少し青くして「ここにおけるよ」とアピール */
+    /* ドラッグ開始時にアサイン先を少し青くして「ここにおけるよ」とアピール */
     .is-dragging .drop-zone { border-color: #93c5fd; background-color: #f8fafc; }
     /* その枠の上に乗った時の強いハイライト */
     .drop-zone-active { border-color: #2563eb !important; background-color: #eff6ff !important; transform: scale(1.02); }
@@ -43,21 +39,56 @@
 
 <div id="app" class="h-screen w-screen flex overflow-hidden">
 
-  <div class="w-40 h-full bg-white border-r border-gray-300 flex flex-col shadow-lg z-30 shrink-0">
-    <div class="bg-indigo-800 text-white px-3 py-3 flex items-center gap-2 shadow-md shrink-0">
+  <div class="w-52 h-full bg-white border-r border-gray-300 flex flex-col shadow-lg z-30 shrink-0">
+    <div class="bg-indigo-800 text-white px-4 py-3 flex items-center gap-2 shadow-md shrink-0">
       <span class="text-lg">👥</span>
-      <h2 class="font-bold text-sm tracking-wider">出勤メンバー</h2>
+      <h2 class="font-bold text-sm tracking-wider">メンバー状況</h2>
     </div>
 
-    <div class="flex-1 overflow-y-auto hide-scrollbar p-3 bg-gray-50 flex flex-col gap-2">
-      <div v-for="staff in staffList" :key="staff"
-           draggable="true"
-           @dragstart="onDragStart(staff, $event)"
-           @dragend="onDragEnd"
-           class="p-2.5 bg-white border border-gray-300 rounded-lg shadow-sm cursor-grab hover:border-indigo-500 hover:shadow-md transition-all flex justify-between items-center group">
-        <span class="font-bold text-gray-700 text-sm">{{ staff }}</span>
-        <span class="text-gray-300 group-hover:text-indigo-400">≡</span>
+    <div class="flex-1 overflow-y-auto custom-scrollbar p-3 bg-gray-50 space-y-5">
+      
+      <div>
+        <div class="text-xs font-black text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1 mb-2.5 flex justify-between items-center shadow-sm">
+          <span>🟢 出勤 (部署別)</span>
+          <span class="font-mono text-[10px] bg-green-200 text-green-800 px-1.5 py-0.5 rounded-full">{{ getStaffCountByStatus('出勤') }}名</span>
+        </div>
+        
+        <div v-for="dept in displayDepts" :key="dept" class="mb-3">
+          <div v-if="getStaffByDeptAndStatus(dept, '出勤').length > 0">
+            <div class="text-[10px] font-black text-gray-400 mb-1 pl-1 tracking-wider">【{{ dept }}】</div>
+            <div class="space-y-1">
+              <div v-for="staff in getStaffByDeptAndStatus(dept, '出勤')" :key="staff.name"
+                   draggable="true"
+                   @dragstart="onDragStart(staff.name, $event)"
+                   @dragend="onDragEnd"
+                   class="p-2 bg-white border border-gray-300 rounded-lg shadow-sm cursor-grab hover:border-indigo-500 hover:shadow-md transition-all flex justify-between items-center group text-xs font-bold text-gray-700">
+                <span>{{ staff.name }}</span>
+                <span class="text-gray-300 group-hover:text-indigo-400 font-mono text-[10px]">≡</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <div>
+        <div class="text-xs font-black text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1 mb-2 flex justify-between items-center shadow-sm">
+          <span>🔴 休暇 (一括)</span>
+          <span class="font-mono text-[10px] bg-red-200 text-red-800 px-1.5 py-0.5 rounded-full">{{ getStaffCountByStatus('休暇') }}名</span>
+        </div>
+        
+        <div class="space-y-1">
+          <div v-for="staff in getStaffByStatus('休暇')" :key="staff.name"
+               draggable="false"
+               class="p-2 bg-red-50/70 border border-red-200 rounded-lg flex justify-between items-center text-xs font-bold text-red-700/80 shadow-sm select-none opacity-75">
+            <span>{{ staff.name }}</span>
+            <span class="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-black tracking-wider">休暇</span>
+          </div>
+          <div v-if="getStaffByStatus('休暇').length === 0" class="text-[10px] text-gray-400 text-center py-2 italic">
+            本日の休暇者はいません
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -66,7 +97,7 @@
     <div class="bg-gray-800 text-white px-4 py-3 flex justify-between items-center shadow-md shrink-0">
       <div class="flex items-center gap-2">
         <span class="text-lg">📋</span>
-        <h2 class="font-bold tracking-wider text-sm">本日の作業一覧</h2>
+        <h2 class="font-bold tracking-wider text-sm">本日の作業指示一覧</h2>
       </div>
       <span class="text-xs bg-gray-700 px-2 py-1 rounded-full text-gray-300 font-mono">{{ workList.length }}件</span>
     </div>
@@ -122,7 +153,7 @@
             <div class="col-span-2">
               <label class="block text-xs font-bold text-gray-700 mb-1">部署・グループ *</label>
               <select v-model="formData.department" class="w-full p-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 focus:border-blue-500 focus:bg-white transition-all">
-                <option v-for="dept in departments" :key="dept" :value="dept">{{ dept }}</option>
+                <option v-for="dept in displayDepts" :key="dept" :value="dept">{{ dept }}</option>
               </select>
             </div>
             <div>
@@ -193,7 +224,7 @@
               
               <select v-model="formData[role]" class="w-full text-center bg-transparent font-bold text-gray-800 text-sm outline-none cursor-pointer appearance-none">
                 <option value="">- 未配置 -</option>
-                <option v-for="staff in staffList" :key="staff" :value="staff">{{ staff }}</option>
+                <option v-for="member in memberList" :key="member.name" :value="member.name">{{ member.name }}</option>
               </select>
             </div>
           </div>
@@ -221,27 +252,41 @@
 
   createApp({
     setup() {
-      const departments = ['工場管理', 'メンテ1課 (GrA)', 'メンテ1課 (GrB)', 'メンテ1課 (GrC)', 'メンテ2課', '巻線課', '技術・試験課'];
-      
-      const staffList = ['永野', '田中', '峯', '稲山', '鈴木', '佐藤', '高橋', '伊藤', '渡辺', '山本', '小林', '加藤'];
+      // 🛠 部署マスター（永野さん指定の順序に完全リニューアル）
+      const displayDepts = ['工場管理', 'メンテ１課', 'メンテ２課', 'メンテ３課', 'メンテ４課', '試験・技術部'];
+
+      // 👥 詳細な人員マスタデータ（のちにGASの出勤マスタAPIと完全連動する構造）
+      const memberList = ref([
+        { name: '永野', dept: '工場管理', status: '出勤' },
+        { name: '稲山', dept: '工場管理', status: '出勤' },
+        { name: '田中', dept: 'メンテ１課', status: '出勤' },
+        { name: '伊藤', dept: 'メンテ１課', status: '休暇' }, // 休暇
+        { name: '鈴木', dept: 'メンテ２課', status: '出勤' },
+        { name: '渡辺', dept: 'メンテ２課', status: '休暇' }, // 休暇
+        { name: '佐藤', dept: 'メンテ３課', status: '出勤' },
+        { name: '小林', dept: 'メンテ３課', status: '出勤' },
+        { name: '高橋', dept: 'メンテ４課', status: '出勤' },
+        { name: '加藤', dept: 'メンテ４課', status: '出勤' },
+        { name: '峯', dept: '試験・技術部', status: '出勤' },
+        { name: '山本', dept: '試験・技術部', status: '出勤' }
+      ]);
 
       const workList = ref([
-        { id: 1, department: 'メンテ1課 (GrA)', priority: '1', seiriNo: '260601', output: '75kW', customer: '三菱重工', nextProcess: '出荷', workDetails: 'ベアリング交換・試運転', notes: '', status: '作業中', mainTanto: '永野', subTanto: '', tan1: '', tan2: '' },
-        { id: 2, department: '巻線課', priority: '2', seiriNo: '260605', output: '55kW', customer: 'プレス工業', nextProcess: 'ワニス処理', workDetails: 'ステータ巻替', notes: '部品到着待ち', status: '未着手', mainTanto: '田中', subTanto: '鈴木', tan1: '', tan2: '' },
-        { id: 3, department: '技術・試験課', priority: '', seiriNo: '260610', output: '11kW', customer: '日本酸素', nextProcess: '', workDetails: 'インパルス試験', notes: '完了済', status: '完了', mainTanto: '峯', subTanto: '', tan1: '', tan2: '' },
-        { id: 4, department: 'メンテ2課', priority: '1', seiriNo: '260615', output: '110kW', customer: '〇〇鉄工所', nextProcess: '現地据付', workDetails: '現地での芯出し調整', notes: '明日朝イチで出発', status: '繰越', mainTanto: '稲山', subTanto: '高橋', tan1: '', tan2: '' },
-        { id: 5, department: 'メンテ1課 (GrB)', priority: '2', seiriNo: '260620', output: '37kW', customer: '川崎重工', nextProcess: '組立', workDetails: 'ロータバランス調整', notes: '振動値OK', status: '作業中', mainTanto: '佐藤', subTanto: '', tan1: '', tan2: '' }
+        { id: 1, department: 'メンテ１課', priority: '1', seiriNo: '260601', output: '75kW', customer: '三菱重工', nextProcess: '出荷', workDetails: 'ベアリング交換・試運転', notes: '', status: '作業中', mainTanto: '永野', subTanto: '', tan1: '', tan2: '' },
+        { id: 2, department: 'メンテ２課', priority: '2', seiriNo: '260605', output: '55kW', customer: 'プレス工業', nextProcess: 'ワニス処理', workDetails: 'ステータ巻替', notes: '部品到着待ち', status: '未着手', mainTanto: '田中', subTanto: '鈴木', tan1: '', tan2: '' },
+        { id: 3, department: '試験・技術部', priority: '', seiriNo: '260610', output: '11kW', customer: '日本酸素', nextProcess: '', workDetails: 'インパルス試験', notes: '完了済', status: '完了', mainTanto: '峯', subTanto: '', tan1: '', tan2: '' }
       ]);
 
       const selectedItem = ref(null);
       const formData = ref({});
 
+      // --- 🖱️ ドラッグ＆ドロップ制御用 ---
       const draggedStaff = ref(null); 
       const dragOverTarget = ref(null); 
       const isDragging = ref(false);
 
-      const onDragStart = (staff, event) => {
-        draggedStaff.value = staff;
+      const onDragStart = (staffName, event) => {
+        draggedStaff.value = staffName;
         isDragging.value = true;
         event.dataTransfer.effectAllowed = 'move';
       };
@@ -261,9 +306,25 @@
         isDragging.value = false;
       };
 
+      // --- 📋 リスト・フィルタ・画面制御ロジック ---
       const selectItem = (item) => {
         selectedItem.value = item;
         formData.value = JSON.parse(JSON.stringify(item));
+      };
+
+      // 左カラム用：指定部署 × 指定ステータス（出勤）のメンバー抽出
+      const getStaffByDeptAndStatus = (dept, status) => {
+        return memberList.value.filter(m => m.dept === dept && m.status === status);
+      };
+
+      // 左カラム用：指定ステータス（休暇）のメンバー一括抽出
+      const getStaffByStatus = (status) => {
+        return memberList.value.filter(m => m.status === status);
+      };
+
+      // 人数カウント用
+      const getStaffCountByStatus = (status) => {
+        return memberList.value.filter(m => m.status === status).length;
       };
 
       const getStatusClass = (status) => {
@@ -286,9 +347,10 @@
       };
 
       return {
-        workList, selectedItem, formData, departments, staffList,
+        workList, selectedItem, formData, displayDepts, memberList,
         dragOverTarget, isDragging, onDragStart, onDragEnd, onDrop, 
-        selectItem, getStatusClass, setStatus, saveData
+        selectItem, getStatusClass, setStatus, saveData,
+        getStaffByDeptAndStatus, getStaffByStatus, getStaffCountByStatus
       };
     }
   }).mount('#app');
