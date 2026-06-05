@@ -422,7 +422,7 @@
             const targetRow = globalData.find(row => String(row["ID"]) === String(id));
             const dept = targetRow ? (targetRow["部署"] || "その他（部署未定）") : "その他（部署未定）";
             
-            alert("⚠️ 担当者が未定です\n作業を開始する前に、担当者を選択してください。");
+            alert("⚠️ 担当者を選択してください。");
             openAssigneeModal(id, dept);
             return; // ここで処理を強制終了（作業開始させない）
         }
