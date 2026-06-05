@@ -300,24 +300,12 @@
                     `;
                 } else if (status === "繰越" || status === "保留") {
                     actionHtml += `
-                        <div class="text-xs text-orange-500 font-bold mb-1"><i class="fas fa-arrow-circle-right"></i> ⛑ 繰越中</div>
-                        <div class="flex gap-2 mt-1">
-                            <button onclick="updateStatus('${row["ID"]}', '作業中（完了予定）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-2 rounded-lg shadow-md flex flex-col items-center justify-center transition duration-200">
-                                <span><i class="fas fa-play"></i> 再開</span>
-                                <span class="text-[0.65rem] font-normal mt-0.5">（完了予定）</span>
-                            </button>
-                             <button onclick="updateStatus('${row["ID"]}', '作業中（繰越予定）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-2 rounded-lg shadow-md flex flex-col items-center justify-center transition duration-200">
-                                <span><i class="fas fa-play"></i> 再開</span>
-                                <span class="text-[0.65rem] font-normal mt-0.5">（繰越予定）</span>
-                            </button>
-                        </div>
-                        <div class="flex flex-col gap-2 mt-2">
-                            <button onclick="updateStatus('${row["ID"]}', '完了')" class="w-full bg-white hover:bg-gray-50 text-green-600 border-2 border-green-500 font-bold py-2 px-2 rounded-lg transition shadow-sm">
-                                <i class="fas fa-check"></i> このまま完了にする
-                            </button>
+                        <div class="bg-orange-50 border border-orange-200 text-orange-800 rounded-lg p-3 text-center shadow-inner flex flex-col items-center justify-center">
+                            <i class="fas fa-arrow-circle-right text-2xl text-orange-500 mb-1"></i>
+                            <p class="font-bold">作業繰越</p>
                         </div>
                         <div class="text-right mt-2">
-                            <button onclick="updateStatus('${row["ID"]}', '未着手')" class="text-xs text-gray-400 underline hover:text-gray-600 transition">未着手に戻す</button>
+                            <button onclick="updateStatus('${row["ID"]}', '未着手')" class="text-xs text-gray-400 underline hover:text-gray-600 transition">繰越を取り消す</button>
                         </div>
                     `;
                 } else if (status === "完了") {
@@ -425,15 +413,26 @@
 
     // ステータス、備考、担当者、そして【正確な打刻時間】をまとめてGASに送信
     async function updateStatus(id, newStatus, linkUrl = null) {
-        // キントーンURLがあれば別タブで開く
+        
+        let newTanto = document.getElementById(`display-tanto-${id}`).innerText;
+        if (newTanto === "未定（タップして選択）") newTanto = "";
+
+        // ★追加：担当者が未選択の場合、作業開始をブロックしてポップアップを開く
+        if (newStatus.includes('作業中') && newTanto === "") {
+            const targetRow = globalData.find(row => String(row["ID"]) === String(id));
+            const dept = targetRow ? (targetRow["部署"] || "その他（部署未定）") : "その他（部署未定）";
+            
+            alert("⚠️ 担当者が未定です\n作業を開始する前に、担当者を選択してください。");
+            openAssigneeModal(id, dept);
+            return; // ここで処理を強制終了（作業開始させない）
+        }
+
+        // 担当者チェックを通過した後に、キントーンURLがあれば別タブで開く
         if (linkUrl && linkUrl !== "undefined" && linkUrl.trim() !== "") {
             window.open(linkUrl, '_blank');
         }
 
         const newNote = document.getElementById(`note-${id}`).value;
-        let newTanto = document.getElementById(`display-tanto-${id}`).innerText;
-        
-        if (newTanto === "未定（タップして選択）") newTanto = "";
 
         // ★追加：ボタンを押した瞬間の正確な端末時刻を取得（通信ラグ対策）
         const now = new Date();
@@ -454,7 +453,6 @@
                 method: 'POST',
                 redirect: 'follow', 
                 headers: { 'Content-Type': 'text/plain' },
-                // ★変更：送信するデータに timestamp を追加
                 body: JSON.stringify({ id: id, status: newStatus, note: newNote, tanto: newTanto, timestamp: timestamp })
             });
 
