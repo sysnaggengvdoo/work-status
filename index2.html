@@ -236,7 +236,9 @@
             rows.forEach(row => {
                 const status = row["完了確認"] || "未着手";
                 let statusClass = "";
-                if (status === "完了予定") statusClass = "status-planned";
+                
+                // ★ステータスフチ色設定（新しいステータス名に対応）
+                if (status.includes("作業中") || status.includes("完了予定")) statusClass = "status-planned";
                 if (status === "完了" || status === "繰越") statusClass = "status-gray";
 
                 const div = document.createElement('div');
@@ -264,21 +266,26 @@
                     actionHtml += `<div class="h-2"></div>`;
                 }
 
-                // ステータスに応じたメインボタン群
+                // ★ステータスに応じたメインボタン群（トグルスイッチ仕様）
                 if (status === "未着手" || status === "") {
                     actionHtml += `
-                        <div class="flex gap-2">
-                            <button onclick="updateStatus('${row["ID"]}', '作業中', '${row["修理カードURL"] || ""}')" class="flex-[2] bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-2 rounded-lg shadow-md flex items-center justify-center gap-2 transition duration-200">
-                                <i class="fas fa-external-link-alt"></i> 作業開始<span class="text-[0.65rem] font-normal">（カード開く）</span>
+                        <div class="flex gap-2 mt-1">
+                            <button onclick="updateStatus('${row["ID"]}', '作業中（完了予定）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-2 rounded-lg shadow-md flex flex-col items-center justify-center transition duration-200">
+                                <span><i class="fas fa-play"></i> 開始</span>
+                                <span class="text-[0.65rem] font-normal mt-0.5">（今日終わる予定）</span>
                             </button>
-                            <button onclick="updateStatus('${row["ID"]}', '繰越')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 font-bold py-2 px-1 rounded-lg text-sm transition duration-200 shadow-sm">
-                                ➡ 繰越
+                            <button onclick="updateStatus('${row["ID"]}', '作業中（繰越予定）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-2 rounded-lg shadow-md flex flex-col items-center justify-center transition duration-200">
+                                <span><i class="fas fa-play"></i> 開始</span>
+                                <span class="text-[0.65rem] font-normal mt-0.5">（持ち越す予定）</span>
                             </button>
                         </div>
                     `;
-                } else if (status === "作業中") {
+                } else if (status === "作業中（完了予定）" || status === "作業中（繰越予定）" || status === "作業中") {
+                    let statusLabel = status === "作業中（完了予定）" ? "完了予定で作業中" : (status === "作業中（繰越予定）" ? "繰越予定で作業中" : "作業中");
+                    let pulseColor = status === "作業中（完了予定）" ? "text-blue-500" : "text-yellow-600";
+                    
                     actionHtml += `
-                        <div class="text-xs text-red-500 font-bold mb-1 animate-pulse"><i class="fas fa-spinner fa-spin"></i> 作業中</div>
+                        <div class="text-xs ${pulseColor} font-bold mb-1 animate-pulse"><i class="fas fa-cog fa-spin"></i> ${statusLabel}</div>
                         <div class="flex gap-2 mt-1">
                             <button onclick="updateStatus('${row["ID"]}', '完了')" class="flex-[2] bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-2 rounded-lg shadow-md flex items-center justify-center gap-2 transition duration-200">
                                 <i class="fas fa-check-square"></i> 作業完了にする
@@ -291,15 +298,20 @@
                             <button onclick="updateStatus('${row["ID"]}', '未着手')" class="text-xs text-gray-400 underline hover:text-gray-600 transition">間違えて開始したため未着手に戻す</button>
                         </div>
                     `;
-                } else if (status === "繰越" || status === "完了予定" || status === "保留") {
-                    let statusLabel = status === "完了予定" ? "完了予定" : "⛑ 繰越中";
-                    let statusColor = status === "完了予定" ? "text-yellow-600" : "text-orange-500";
+                } else if (status === "繰越" || status === "保留") {
                     actionHtml += `
-                        <div class="text-xs ${statusColor} font-bold mb-1"><i class="fas fa-arrow-circle-right"></i> ${statusLabel}</div>
-                        <div class="flex flex-col gap-2 mt-1">
-                            <button onclick="updateStatus('${row["ID"]}', '作業中', '${row["修理カードURL"] || ""}')" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-2 rounded-lg shadow-md flex items-center justify-center gap-2 transition duration-200">
-                                <i class="fas fa-play"></i> 作業を再開する
+                        <div class="text-xs text-orange-500 font-bold mb-1"><i class="fas fa-arrow-circle-right"></i> ⛑ 繰越中</div>
+                        <div class="flex gap-2 mt-1">
+                            <button onclick="updateStatus('${row["ID"]}', '作業中（完了予定）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-2 rounded-lg shadow-md flex flex-col items-center justify-center transition duration-200">
+                                <span><i class="fas fa-play"></i> 再開</span>
+                                <span class="text-[0.65rem] font-normal mt-0.5">（今日終わる予定）</span>
                             </button>
+                             <button onclick="updateStatus('${row["ID"]}', '作業中（繰越予定）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-2 rounded-lg shadow-md flex flex-col items-center justify-center transition duration-200">
+                                <span><i class="fas fa-play"></i> 再開</span>
+                                <span class="text-[0.65rem] font-normal mt-0.5">（持ち越す予定）</span>
+                            </button>
+                        </div>
+                        <div class="flex flex-col gap-2 mt-2">
                             <button onclick="updateStatus('${row["ID"]}', '完了')" class="w-full bg-white hover:bg-gray-50 text-green-600 border-2 border-green-500 font-bold py-2 px-2 rounded-lg transition shadow-sm">
                                 <i class="fas fa-check"></i> このまま完了にする
                             </button>
@@ -411,7 +423,7 @@
         updateStatus(targetId, currentStatus);
     }
 
-    // ステータス、備考、担当者をまとめてGASに送信
+    // ステータス、備考、担当者、そして【正確な打刻時間】をまとめてGASに送信
     async function updateStatus(id, newStatus, linkUrl = null) {
         // キントーンURLがあれば別タブで開く
         if (linkUrl && linkUrl !== "undefined" && linkUrl.trim() !== "") {
@@ -422,6 +434,10 @@
         let newTanto = document.getElementById(`display-tanto-${id}`).innerText;
         
         if (newTanto === "未定（タップして選択）") newTanto = "";
+
+        // ★追加：ボタンを押した瞬間の正確な端末時刻を取得（通信ラグ対策）
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
 
         // UIを「更新中」状態にして連打を防止
         const container = document.getElementById(`action-container-${id}`);
@@ -438,7 +454,8 @@
                 method: 'POST',
                 redirect: 'follow', 
                 headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({ id: id, status: newStatus, note: newNote, tanto: newTanto })
+                // ★変更：送信するデータに timestamp を追加
+                body: JSON.stringify({ id: id, status: newStatus, note: newNote, tanto: newTanto, timestamp: timestamp })
             });
 
             const result = await response.json();
