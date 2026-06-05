@@ -272,11 +272,11 @@
                         <div class="flex gap-2 mt-1">
                             <button onclick="updateStatus('${row["ID"]}', '作業中（完了予定）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-2 rounded-lg shadow-md flex flex-col items-center justify-center transition duration-200">
                                 <span><i class="fas fa-play"></i> 開始</span>
-                                <span class="text-[0.65rem] font-normal mt-0.5">（今日終わる予定）</span>
+                                <span class="text-[0.65rem] font-normal mt-0.5">（完了予定）</span>
                             </button>
                             <button onclick="updateStatus('${row["ID"]}', '作業中（繰越予定）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-2 rounded-lg shadow-md flex flex-col items-center justify-center transition duration-200">
                                 <span><i class="fas fa-play"></i> 開始</span>
-                                <span class="text-[0.65rem] font-normal mt-0.5">（持ち越す予定）</span>
+                                <span class="text-[0.65rem] font-normal mt-0.5">（繰越予定）</span>
                             </button>
                         </div>
                     `;
@@ -304,11 +304,11 @@
                         <div class="flex gap-2 mt-1">
                             <button onclick="updateStatus('${row["ID"]}', '作業中（完了予定）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-2 rounded-lg shadow-md flex flex-col items-center justify-center transition duration-200">
                                 <span><i class="fas fa-play"></i> 再開</span>
-                                <span class="text-[0.65rem] font-normal mt-0.5">（今日終わる予定）</span>
+                                <span class="text-[0.65rem] font-normal mt-0.5">（完了予定）</span>
                             </button>
                              <button onclick="updateStatus('${row["ID"]}', '作業中（繰越予定）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-2 rounded-lg shadow-md flex flex-col items-center justify-center transition duration-200">
                                 <span><i class="fas fa-play"></i> 再開</span>
-                                <span class="text-[0.65rem] font-normal mt-0.5">（持ち越す予定）</span>
+                                <span class="text-[0.65rem] font-normal mt-0.5">（繰越予定）</span>
                             </button>
                         </div>
                         <div class="flex flex-col gap-2 mt-2">
