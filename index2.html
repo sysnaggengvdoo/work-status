@@ -417,14 +417,14 @@
         let newTanto = document.getElementById(`display-tanto-${id}`).innerText;
         if (newTanto === "未定（タップして選択）") newTanto = "";
 
-        // ★追加：担当者が未選択の場合、作業開始をブロックしてポップアップを開く
+        // ★追加：担当者が未選択の場合、アラートなしで直接担当者選択ポップアップを開く
         if (newStatus.includes('作業中') && newTanto === "") {
             const targetRow = globalData.find(row => String(row["ID"]) === String(id));
             const dept = targetRow ? (targetRow["部署"] || "その他（部署未定）") : "その他（部署未定）";
             
-            alert("⚠️ 担当者を選択してください。");
+            // 直接ポップアップを開いて、通信処理を中断する
             openAssigneeModal(id, dept);
-            return; // ここで処理を強制終了（作業開始させない）
+            return; 
         }
 
         // 担当者チェックを通過した後に、キントーンURLがあれば別タブで開く
@@ -434,7 +434,7 @@
 
         const newNote = document.getElementById(`note-${id}`).value;
 
-        // ★追加：ボタンを押した瞬間の正確な端末時刻を取得（通信ラグ対策）
+        // ボタンを押した瞬間の正確な端末時刻を取得（通信ラグ対策）
         const now = new Date();
         const timestamp = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
 
