@@ -133,6 +133,10 @@
     let globalData = [];
     let attendanceData = {}; 
     let currentEditingId = null; 
+    
+    // ★保留されたステータスとURLを記憶する変数
+    let pendingStatus = null;
+    let pendingLinkUrl = null;
 
     function switchMainTab(tabName) {
         const workMain = document.getElementById('work-order-main');
@@ -237,7 +241,6 @@
                 const status = row["完了確認"] || "未着手";
                 let statusClass = "";
                 
-                // ★ステータスフチ色設定（新しいステータス名に対応）
                 if (status.includes("作業中") || status.includes("完了予定")) statusClass = "status-planned";
                 if (status === "完了" || status === "繰越") statusClass = "status-gray";
 
@@ -246,18 +249,14 @@
                 
                 const outputDisplay = row["出"] ? `<div class="output-tag">出力: ${row["出"]}</div>` : "";
                 
-                // 作業中・完了など、いつでもマニュアルで見たい時のためのミニリンク
                 const kintoneSmallLink = row["修理カードURL"] 
                     ? `<a href="${row["修理カードURL"]}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-2" title="修理カードを開く"><i class="fas fa-external-link-alt"></i></a>` 
                     : "";
 
-                // === ここからトグルUIの生成 ===
                 let actionHtml = `<div id="action-container-${row["ID"]}" class="mt-4">`;
                 
-                // 備考欄 (常に表示)
                 actionHtml += `<textarea id="note-${row["ID"]}" placeholder="備考を入力..." class="w-full p-2 text-sm border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-colors" rows="2">${row["備考"] || ""}</textarea>`;
                 
-                // 備考のみ保存ボタン（完了状態以外で表示）
                 if (status !== "完了") {
                     actionHtml += `<div class="flex justify-end mt-1 mb-3">
                         <button onclick="updateStatus('${row["ID"]}', '${status}')" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-1.5 px-3 rounded shadow-sm transition"><i class="fas fa-save"></i> 備考のみ保存</button>
@@ -266,7 +265,6 @@
                     actionHtml += `<div class="h-2"></div>`;
                 }
 
-                // ★ステータスに応じたメインボタン群（トグルスイッチ仕様）
                 if (status === "未着手" || status === "") {
                     actionHtml += `
                         <div class="flex gap-2 mt-1">
@@ -352,7 +350,13 @@
         }
     }
 
-    function openAssigneeModal(id, dept) {
+    // ★追加：fromUpdateStatusフラグを設け、単なる担当者変更ボタンからの呼び出し時は記憶をリセット
+    function openAssigneeModal(id, dept, fromUpdateStatus = false) {
+        if (!fromUpdateStatus) {
+            pendingStatus = null;
+            pendingLinkUrl = null;
+        }
+
         currentEditingId = id;
         document.getElementById('assigneeModal').classList.remove('hidden');
         document.getElementById('modalTitle').innerText = `【${dept}】の担当者を選択`;
@@ -385,6 +389,8 @@
     function closeAssigneeModal() {
         document.getElementById('assigneeModal').classList.add('hidden');
         currentEditingId = null;
+        pendingStatus = null;
+        pendingLinkUrl = null;
     }
 
     // 担当者を確定して保存する
@@ -402,13 +408,22 @@
         }
         
         const targetId = currentEditingId;
+        const targetRow = globalData.find(row => String(row["ID"]) === String(targetId));
+        
+        // ★変更：保留中のステータス（開始ボタンからの呼び出し）があればそれを使用し、なければ元のステータスを維持
+        let statusToUpdate = targetRow ? (targetRow["完了確認"] || "未着手") : "未着手";
+        let linkToOpen = null;
+
+        if (pendingStatus) {
+            statusToUpdate = pendingStatus;
+            linkToOpen = pendingLinkUrl;
+        }
+
+        // モーダルを閉じてフラグをリセット
         closeAssigneeModal();
         
-        // モーダルからの保存時は、現在のステータスをそのまま維持してupdateStatusを呼ぶ
-        const targetRow = globalData.find(row => String(row["ID"]) === String(targetId));
-        const currentStatus = targetRow ? (targetRow["完了確認"] || "未着手") : "未着手";
-        
-        updateStatus(targetId, currentStatus);
+        // 更新処理を続行
+        updateStatus(targetId, statusToUpdate, linkToOpen);
     }
 
     // ステータス、備考、担当者、そして【正確な打刻時間】をまとめてGASに送信
@@ -417,13 +432,17 @@
         let newTanto = document.getElementById(`display-tanto-${id}`).innerText;
         if (newTanto === "未定（タップして選択）") newTanto = "";
 
-        // ★追加：担当者が未選択の場合、アラートなしで直接担当者選択ポップアップを開く
+        // ★変更：担当者が未選択の場合、押そうとしていたボタンの意図を記憶してポップアップを開く
         if (newStatus.includes('作業中') && newTanto === "") {
             const targetRow = globalData.find(row => String(row["ID"]) === String(id));
             const dept = targetRow ? (targetRow["部署"] || "その他（部署未定）") : "その他（部署未定）";
             
-            // 直接ポップアップを開いて、通信処理を中断する
-            openAssigneeModal(id, dept);
+            // 意図を記憶
+            pendingStatus = newStatus;
+            pendingLinkUrl = linkUrl;
+
+            // 直接ポップアップを開いて、通信処理を一時中断する（trueフラグを渡す）
+            openAssigneeModal(id, dept, true);
             return; 
         }
 
