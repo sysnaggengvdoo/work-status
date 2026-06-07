@@ -265,16 +265,15 @@
                     actionHtml += `<div class="h-2"></div>`;
                 }
 
+                // ★変更：左に繰越、右に完了。文言を「▶ 作業開始（◯◯）」で1行に統一
                 if (status === "未着手" || status === "") {
                     actionHtml += `
                         <div class="flex gap-2 mt-1">
-                            <button onclick="updateStatus('${row["ID"]}', '作業中（完了予定）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-2 rounded-lg shadow-md flex flex-col items-center justify-center transition duration-200">
-                                <span><i class="fas fa-play"></i> 開始</span>
-                                <span class="text-[0.65rem] font-normal mt-0.5">（完了予定）</span>
+                            <button onclick="updateStatus('${row["ID"]}', '作業中（繰越予定）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-1 rounded-lg shadow-md flex items-center justify-center transition duration-200 text-sm">
+                                <i class="fas fa-play mr-1"></i> 作業開始（繰越）
                             </button>
-                            <button onclick="updateStatus('${row["ID"]}', '作業中（繰越予定）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-2 rounded-lg shadow-md flex flex-col items-center justify-center transition duration-200">
-                                <span><i class="fas fa-play"></i> 開始</span>
-                                <span class="text-[0.65rem] font-normal mt-0.5">（繰越予定）</span>
+                            <button onclick="updateStatus('${row["ID"]}', '作業中（完了予定）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-1 rounded-lg shadow-md flex items-center justify-center transition duration-200 text-sm">
+                                <i class="fas fa-play mr-1"></i> 作業開始（完了）
                             </button>
                         </div>
                     `;
@@ -410,7 +409,7 @@
         const targetId = currentEditingId;
         const targetRow = globalData.find(row => String(row["ID"]) === String(targetId));
         
-        // ★変更：保留中のステータス（開始ボタンからの呼び出し）があればそれを使用し、なければ元のステータスを維持
+        // 保留中のステータス（開始ボタンからの呼び出し）があればそれを使用し、なければ元のステータスを維持
         let statusToUpdate = targetRow ? (targetRow["完了確認"] || "未着手") : "未着手";
         let linkToOpen = null;
 
@@ -432,7 +431,7 @@
         let newTanto = document.getElementById(`display-tanto-${id}`).innerText;
         if (newTanto === "未定（タップして選択）") newTanto = "";
 
-        // ★変更：担当者が未選択の場合、押そうとしていたボタンの意図を記憶してポップアップを開く
+        // 担当者が未選択の場合、押そうとしていたボタンの意図を記憶してポップアップを開く
         if (newStatus.includes('作業中') && newTanto === "") {
             const targetRow = globalData.find(row => String(row["ID"]) === String(id));
             const dept = targetRow ? (targetRow["部署"] || "その他（部署未定）") : "その他（部署未定）";
