@@ -67,19 +67,43 @@
         
         <div class="space-y-6">
           <div v-for="group in filteredGroupedLogs" :key="group.no" class="bg-white border-2 border-gray-200 rounded-xl shadow-md overflow-hidden">
-            <div class="bg-gray-800 text-white p-3 flex flex-col gap-1">
-              <div class="flex justify-between items-start">
-                <span class="font-black text-xl text-blue-300">{{ group.no }}</span>
-                <div class="flex flex-col items-end gap-1">
-                  <span class="bg-gray-600 px-2 py-1 rounded text-xs">履歴 {{ group.records.length }}件</span>
-                  <span v-if="calcLeadTimeText(group)" class="bg-purple-600 px-2 py-1 rounded text-xs font-bold text-white">
+            
+            <!-- ★レイアウト変更：整理No / 履歴 / LT → 区切り線 → 顧客名 / 出力 -->
+            <div class="bg-gray-800 text-white p-3 flex flex-col gap-2">
+              
+              <!-- 1行目：整理No、履歴、LT -->
+              <div class="flex justify-between items-start gap-2">
+                <span class="font-black text-xl text-blue-300 leading-tight">
+                  {{ group.no }}
+                </span>
+
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="bg-gray-600 px-2 py-1 rounded text-xs font-bold">
+                    履歴 {{ group.records.length }}件
+                  </span>
+
+                  <span 
+                    v-if="calcLeadTimeText(group)" 
+                    class="bg-purple-600 px-2 py-1 rounded text-xs font-bold text-white"
+                  >
                     LT: {{ calcLeadTimeText(group) }}
                   </span>
-                  <span v-if="group.output" class="text-xs font-bold text-white">出力: {{ group.output }}</span>
                 </div>
               </div>
-              <div class="text-sm font-bold border-t border-gray-600 pt-1 mt-1">
-                顧客名: {{ group.customer }}
+
+              <!-- 区切り線 -->
+              <div class="border-t border-gray-600"></div>
+
+              <!-- 2行目：顧客名、出力 -->
+              <div class="flex justify-between items-start gap-3 text-sm font-bold">
+                <div class="min-w-0 flex-1">
+                  顧客名: 
+                  <span class="break-words">{{ group.customer }}</span>
+                </div>
+
+                <div v-if="group.output" class="shrink-0 text-right text-white">
+                  出力: {{ group.output }}
+                </div>
               </div>
             </div>
 
