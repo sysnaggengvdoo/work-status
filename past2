@@ -55,9 +55,11 @@
         <div class="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
         <p class="text-gray-600 font-bold">データを読み込み中...</p>
       </div>
+
       <div v-else-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
         {{ error }}
       </div>
+
       <div v-else>
         <p class="text-sm text-gray-500 mb-3 text-right">
           該当: <span class="font-bold text-gray-800">{{ filteredGroupedLogs.length }}</span> 案件 
@@ -65,7 +67,7 @@
         
         <div class="space-y-6">
           <div v-for="group in filteredGroupedLogs" :key="group.no" class="bg-white border-2 border-gray-200 rounded-xl shadow-md overflow-hidden">
-        <div class="bg-gray-800 text-white p-3 flex flex-col gap-1">
+            <div class="bg-gray-800 text-white p-3 flex flex-col gap-1">
               <div class="flex justify-between items-start">
                 <span class="font-black text-xl text-blue-300">{{ group.no }}</span>
                 <div class="flex flex-col items-end gap-1">
@@ -77,8 +79,9 @@
                 顧客名: {{ group.customer }}
               </div>
             </div>
+
             <div class="p-4 space-y-5 bg-gray-50">
-            <div v-for="(log, idx) in group.records" :key="idx" class="relative pl-4 border-l-4 border-blue-400">
+              <div v-for="(log, idx) in group.records" :key="idx" class="relative pl-4 border-l-4 border-blue-400">
                 <div class="flex justify-between items-center mb-1">
                   <div class="flex items-center gap-2">
                     <span class="text-gray-600 text-xs font-bold bg-gray-200 px-2 py-0.5 rounded">
@@ -97,10 +100,19 @@
                   </div>
                   <span class="text-sm font-bold text-blue-800">担当: {{ log['担当'] }}</span>
                 </div>
+
+                <!-- ★追加：工数表示 30分単位 / 開始・終了時刻は非表示 -->
+                <div v-if="calcWorkHoursText(log)" class="mb-2 text-right">
+                  <span class="inline-block bg-blue-100 text-blue-800 border border-blue-300 rounded px-2 py-0.5 text-xs font-bold">
+                    工数: {{ calcWorkHoursText(log) }}
+                  </span>
+                </div>
+
                 <p class="text-sm mb-2 text-gray-800">
                   <span class="font-bold text-gray-500 text-xs">作業内容:</span><br>
                   {{ log['作業内容'] }}
                 </p>
+
                 <div class="bg-yellow-100 p-3 rounded border border-yellow-300 shadow-sm mt-2">
                   <p class="font-bold text-yellow-800 mb-1 text-xs">備考・引き継ぎ:</p>
                   <p class="text-gray-800 whitespace-pre-wrap text-sm">{{ log['備考（引継ぎ・進捗状況等）'] || log['備考'] || 'なし' }}</p>
@@ -108,6 +120,7 @@
               </div>
             </div>
           </div>
+
           <div v-if="filteredGroupedLogs.length === 0" class="text-center py-10 text-gray-500 font-bold">
             履歴が見つかりません。
           </div>
@@ -173,6 +186,53 @@
         const formatDate = (val) => {
           if (!val) return '日付不明';
           return String(val).split(' ')[0];
+        };
+
+        // ★追加：日時データを安全にDate化する
+        const parseDateTime = (val) => {
+          if (!val) return null;
+
+          if (val instanceof Date) return val;
+
+          const str = String(val).trim();
+          if (!str) return null;
+
+          // yyyy/MM/dd HH:mm:ss または yyyy-MM-dd HH:mm:ss に対応
+          const normalized = str.replace(/-/g, '/');
+          const date = new Date(normalized);
+
+          if (isNaN(date.getTime())) return null;
+          return date;
+        };
+
+        // ★追加：DB側の完了・繰越時間の列名ゆれに対応
+        const getEndTimeValue = (log) => {
+          return (
+            log['繰越・完了時間'] ||
+            log['完了・繰越時間'] ||
+            log['繰越完了時間'] ||
+            log['完了時間'] ||
+            ''
+          );
+        };
+
+        // ★追加：工数を30分単位で算出して表示
+        // 表示例：0.5h / 1.0h / 1.5h
+        const calcWorkHoursText = (log) => {
+          const start = parseDateTime(log['開始時間']);
+          const end = parseDateTime(getEndTimeValue(log));
+
+          if (!start || !end) return '';
+
+          const diffMinutes = (end.getTime() - start.getTime()) / 1000 / 60;
+
+          if (diffMinutes <= 0) return '';
+
+          // 30分単位に四捨五入
+          const roundedHalfHours = Math.round(diffMinutes / 30);
+          const hours = roundedHalfHours * 0.5;
+
+          return `${hours.toFixed(1)}h`;
         };
 
         // ★改修1：爆速キャッシュ＆裏更新ロジック
@@ -275,7 +335,8 @@
           showYesterday, 
           clearSearch,
           refreshData,
-          formatDate 
+          formatDate,
+          calcWorkHoursText
         };
       }
     }).mount('#app');
