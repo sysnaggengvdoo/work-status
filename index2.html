@@ -138,6 +138,42 @@
     let pendingStatus = null;
     let pendingLinkUrl = null;
 
+    // ★v3互換・index2正式値 両対応の作業中判定
+    function isWorkingStatus(status) {
+        return (
+            status === "完了予定" ||
+            status === "作業中" ||
+            status === "作業中（完了予定）" ||
+            status === "作業中（繰越予定）" ||
+            status === "作業中（完了）" ||
+            status === "作業中（繰越）"
+        );
+    }
+
+    function getWorkingStatusLabel(status) {
+        if (status === "完了予定" || status === "作業中（完了予定）" || status === "作業中（完了）") {
+            return "完了予定で作業中";
+        }
+
+        if (status === "作業中（繰越予定）" || status === "作業中（繰越）") {
+            return "繰越予定で作業中";
+        }
+
+        return "作業中";
+    }
+
+    function getWorkingStatusColor(status) {
+        if (status === "完了予定" || status === "作業中（完了予定）" || status === "作業中（完了）") {
+            return "text-blue-500";
+        }
+
+        if (status === "作業中（繰越予定）" || status === "作業中（繰越）") {
+            return "text-yellow-600";
+        }
+
+        return "text-blue-500";
+    }
+
     function switchMainTab(tabName) {
         const workMain = document.getElementById('work-order-main');
         const calcFrame = document.getElementById('calc-iframe');
@@ -241,7 +277,7 @@
                 const status = row["完了確認"] || "未着手";
                 let statusClass = "";
                 
-                if (status.includes("作業中") || status.includes("完了予定")) statusClass = "status-planned";
+                if (isWorkingStatus(status)) statusClass = "status-planned";
                 if (status === "完了" || status === "繰越") statusClass = "status-gray";
 
                 const div = document.createElement('div');
@@ -265,21 +301,22 @@
                     actionHtml += `<div class="h-2"></div>`;
                 }
 
-                // ★変更：左に繰越、右に完了。文言を「▶ 作業開始（◯◯）」で1行に統一
+                // ★index2正式値：開始ボタンは「作業中（繰越）」「作業中（完了）」を送信
+                // ★現行v3の「完了予定」はGAS側で開始時間記録対象として両立
                 if (status === "未着手" || status === "") {
                     actionHtml += `
                         <div class="flex gap-2 mt-1">
-                            <button onclick="updateStatus('${row["ID"]}', '作業中（繰越予定）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-1 rounded-lg shadow-md flex items-center justify-center transition duration-200 text-sm">
+                            <button onclick="updateStatus('${row["ID"]}', '作業中（繰越）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-1 rounded-lg shadow-md flex items-center justify-center transition duration-200 text-sm">
                                 <i class="fas fa-play mr-1"></i> 作業開始（繰越）
                             </button>
-                            <button onclick="updateStatus('${row["ID"]}', '作業中（完了予定）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-1 rounded-lg shadow-md flex items-center justify-center transition duration-200 text-sm">
+                            <button onclick="updateStatus('${row["ID"]}', '作業中（完了）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-1 rounded-lg shadow-md flex items-center justify-center transition duration-200 text-sm">
                                 <i class="fas fa-play mr-1"></i> 作業開始（完了）
                             </button>
                         </div>
                     `;
-                } else if (status === "作業中（完了予定）" || status === "作業中（繰越予定）" || status === "作業中") {
-                    let statusLabel = status === "作業中（完了予定）" ? "完了予定で作業中" : (status === "作業中（繰越予定）" ? "繰越予定で作業中" : "作業中");
-                    let pulseColor = status === "作業中（完了予定）" ? "text-blue-500" : "text-yellow-600";
+                } else if (isWorkingStatus(status)) {
+                    let statusLabel = getWorkingStatusLabel(status);
+                    let pulseColor = getWorkingStatusColor(status);
                     
                     actionHtml += `
                         <div class="text-xs ${pulseColor} font-bold mb-1 animate-pulse"><i class="fas fa-cog fa-spin"></i> ${statusLabel}</div>
@@ -425,7 +462,8 @@
         updateStatus(targetId, statusToUpdate, linkToOpen);
     }
 
-    // ステータス、備考、担当者、そして【正確な打刻時間】をまとめてGASに送信
+    // ステータス、備考、担当者をまとめてGASに送信
+    // ※時刻はGAS側で取得・記録する
     async function updateStatus(id, newStatus, linkUrl = null) {
         
         let newTanto = document.getElementById(`display-tanto-${id}`).innerText;
@@ -452,10 +490,6 @@
 
         const newNote = document.getElementById(`note-${id}`).value;
 
-        // ボタンを押した瞬間の正確な端末時刻を取得（通信ラグ対策）
-        const now = new Date();
-        const timestamp = `${now.getFullYear()}/${(now.getMonth()+1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-
         // UIを「更新中」状態にして連打を防止
         const container = document.getElementById(`action-container-${id}`);
         const originalHtml = container.innerHTML;
@@ -471,7 +505,7 @@
                 method: 'POST',
                 redirect: 'follow', 
                 headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify({ id: id, status: newStatus, note: newNote, tanto: newTanto, timestamp: timestamp })
+                body: JSON.stringify({ id: id, status: newStatus, note: newNote, tanto: newTanto })
             });
 
             const result = await response.json();
