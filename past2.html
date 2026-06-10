@@ -72,6 +72,9 @@
                 <span class="font-black text-xl text-blue-300">{{ group.no }}</span>
                 <div class="flex flex-col items-end gap-1">
                   <span class="bg-gray-600 px-2 py-1 rounded text-xs">履歴 {{ group.records.length }}件</span>
+                  <span v-if="calcLeadTimeText(group)" class="bg-purple-600 px-2 py-1 rounded text-xs font-bold text-white">
+                    LT: {{ calcLeadTimeText(group) }}
+                  </span>
                   <span v-if="group.output" class="text-xs font-bold text-white">出力: {{ group.output }}</span>
                 </div>
               </div>
@@ -101,7 +104,7 @@
                   <span class="text-sm font-bold text-blue-800">担当: {{ log['担当'] }}</span>
                 </div>
 
-                <!-- ★追加：工数表示 30分単位 / 開始・終了時刻は非表示 -->
+                <!-- ★工数表示：30分単位 / 開始・終了時刻は非表示 -->
                 <div v-if="calcWorkHoursText(log)" class="mb-2 text-right">
                   <span class="inline-block bg-blue-100 text-blue-800 border border-blue-300 rounded px-2 py-0.5 text-xs font-bold">
                     工数: {{ calcWorkHoursText(log) }}
@@ -188,7 +191,7 @@
           return String(val).split(' ')[0];
         };
 
-        // ★追加：日時データを安全にDate化する
+        // ★日時データを安全にDate化する
         const parseDateTime = (val) => {
           if (!val) return null;
 
@@ -205,7 +208,25 @@
           return date;
         };
 
-        // ★追加：DB側の完了・繰越時間の列名ゆれに対応
+        // ★日付だけを比較するため、時刻を00:00:00に揃える
+        const parseDateOnly = (val) => {
+          const dateTime = parseDateTime(val);
+          if (!dateTime) return null;
+
+          return new Date(
+            dateTime.getFullYear(),
+            dateTime.getMonth(),
+            dateTime.getDate()
+          );
+        };
+
+        // ★ログの日付をソート用の数値に変換
+        const getLogTime = (log) => {
+          const date = parseDateTime(log['TS'] || log['タイムスタンプ'] || log['日付']);
+          return date ? date.getTime() : 0;
+        };
+
+        // ★DB側の完了・繰越時間の列名ゆれに対応
         const getEndTimeValue = (log) => {
           return (
             log['繰越・完了時間'] ||
@@ -216,7 +237,7 @@
           );
         };
 
-        // ★追加：工数を30分単位で算出して表示
+        // ★工数を30分単位で算出して表示
         // 表示例：0.5h / 1.0h / 1.5h
         const calcWorkHoursText = (log) => {
           const start = parseDateTime(log['開始時間']);
@@ -233,6 +254,28 @@
           const hours = roundedHalfHours * 0.5;
 
           return `${hours.toFixed(1)}h`;
+        };
+
+        // ★案件単位のLTを算出
+        // 定義：同じ整理Noの初回DB登録日から最終DB登録日までの日数
+        // 同日完結は1日として扱う
+        const calcLeadTimeText = (group) => {
+          if (!group || !group.records || group.records.length === 0) return '';
+
+          const dates = group.records
+            .map(log => parseDateOnly(log['TS'] || log['タイムスタンプ'] || log['日付']))
+            .filter(date => date !== null);
+
+          if (dates.length === 0) return '';
+
+          const minTime = Math.min(...dates.map(date => date.getTime()));
+          const maxTime = Math.max(...dates.map(date => date.getTime()));
+
+          const diffDays = Math.floor((maxTime - minTime) / (1000 * 60 * 60 * 24)) + 1;
+
+          if (diffDays <= 0) return '';
+
+          return `${diffDays}日`;
         };
 
         // ★改修1：爆速キャッシュ＆裏更新ロジック
@@ -261,7 +304,9 @@
             const json = await response.json();
             
             if(json.status === "success") {
-              const freshData = json.data.reverse();
+              // ★API取得データはここではreverseしない
+              // 並び順は groupedLogs 側で明示的に降順制御する
+              const freshData = json.data || [];
               allLogs.value = freshData;
               localStorage.setItem(CACHE_KEY, JSON.stringify(freshData));
             } else {
@@ -281,17 +326,39 @@
 
         const groupedLogs = computed(() => {
           const groups = {};
+
           allLogs.value.forEach(log => {
             const no = String(log['整理№'] || log['整理No'] || log['整理No.'] || 'Noなし');
+            const logTime = getLogTime(log);
+
             if (!groups[no]) {
-              groups[no] = { no: no, customer: String(log['顧客名'] || '未入力'), output: String(log['出'] || log['出力'] || ''), records: [] };
+              groups[no] = {
+                no: no,
+                customer: String(log['顧客名'] || '未入力'),
+                output: String(log['出'] || log['出力'] || ''),
+                records: [],
+                latestTime: logTime
+              };
             }
+
             if (!groups[no].output && (log['出'] || log['出力'])) {
               groups[no].output = String(log['出'] || log['出力']);
             }
+
+            if (logTime > groups[no].latestTime) {
+              groups[no].latestTime = logTime;
+            }
+
             groups[no].records.push(log);
           });
-          return Object.values(groups);
+
+          // ★各案件内の履歴を降順に並べる
+          Object.values(groups).forEach(group => {
+            group.records.sort((a, b) => getLogTime(b) - getLogTime(a));
+          });
+
+          // ★案件グループ自体も最新履歴日で降順に並べる
+          return Object.values(groups).sort((a, b) => b.latestTime - a.latestTime);
         });
 
         // ★改修2：全角/半角スペース対応＆AND（複数条件）検索ロジック
@@ -336,7 +403,8 @@
           clearSearch,
           refreshData,
           formatDate,
-          calcWorkHoursText
+          calcWorkHoursText,
+          calcLeadTimeText
         };
       }
     }).mount('#app');
