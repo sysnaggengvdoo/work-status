@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -302,6 +303,32 @@
           return `${diffDays}日`;
         };
 
+        // ★出力値を安全に取得する
+        // 日付っぽい値は「出力」として扱わない
+        const getOutputValue = (log) => {
+          const candidates = [
+            log['出'],
+            log['出力'],
+            log['出力(kW)'],
+            log['容量'],
+            log['容量(kW)']
+          ];
+
+          for (const value of candidates) {
+            if (value === undefined || value === null) continue;
+
+            const text = String(value).trim();
+            if (!text) continue;
+
+            // yyyy/MM/dd や yyyy-MM-dd 形式は出力値として扱わない
+            if (/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}/.test(text)) continue;
+
+            return text;
+          }
+
+          return '';
+        };
+
         // ★改修1：爆速キャッシュ＆裏更新ロジック
         const fetchAllData = async (forceRefresh = false) => {
           if (forceRefresh) {
@@ -354,19 +381,20 @@
           allLogs.value.forEach(log => {
             const no = String(log['整理№'] || log['整理No'] || log['整理No.'] || 'Noなし');
             const logTime = getLogTime(log);
+            const outputValue = getOutputValue(log);
 
             if (!groups[no]) {
               groups[no] = {
                 no: no,
                 customer: String(log['顧客名'] || '未入力'),
-                output: String(log['出'] || log['出力'] || ''),
+                output: outputValue,
                 records: [],
                 latestTime: logTime
               };
             }
 
-            if (!groups[no].output && (log['出'] || log['出力'])) {
-              groups[no].output = String(log['出'] || log['出力']);
+            if (!groups[no].output && outputValue) {
+              groups[no].output = outputValue;
             }
 
             if (logTime > groups[no].latestTime) {
@@ -435,3 +463,4 @@
   </script>
 </body>
 </html>
+```
