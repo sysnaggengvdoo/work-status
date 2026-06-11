@@ -109,7 +109,8 @@
             </div>
 
             <div class="p-4 space-y-5 bg-gray-50">
-              <div v-for="(log, idx) in group.records" :key="idx" class="relative pl-4 border-l-4 border-blue-400">
+              <!-- ★直近1件だけ常時表示。展開時だけ2件目以降も描画 -->
+              <div v-for="(log, idx) in getVisibleRecords(group)" :key="`${group.no}-${idx}-${log['TS'] || log['タイムスタンプ'] || log['日付'] || ''}`" class="relative pl-4 border-l-4 border-blue-400">
                 <div class="flex justify-between items-center mb-1">
                   <div class="flex items-center gap-2">
                     <span class="text-gray-600 text-xs font-bold bg-gray-200 px-2 py-0.5 rounded">
@@ -146,6 +147,20 @@
                   <p class="text-gray-800 whitespace-pre-wrap text-sm">{{ log['備考（引継ぎ・進捗状況等）'] || log['備考'] || 'なし' }}</p>
                 </div>
               </div>
+
+              <!-- ★2件目以降の折り畳みフッター -->
+              <button 
+                v-if="group.records.length > 1"
+                @click="toggleGroup(group.no)"
+                class="w-full py-2 px-3 rounded-lg border border-gray-300 bg-white hover:bg-blue-50 text-blue-700 text-sm font-bold shadow-sm transition flex items-center justify-center gap-2"
+              >
+                <span v-if="isGroupExpanded(group.no)">
+                  ▲ 過去履歴を閉じる
+                </span>
+                <span v-else>
+                  ▼ 過去履歴をさらに {{ group.records.length - 1 }}件表示
+                </span>
+              </button>
             </div>
           </div>
 
@@ -210,6 +225,9 @@
         const searchQuery = ref("");
         const isLoading = ref(true);
         const error = ref(null);
+
+        // ★案件ごとの履歴展開状態
+        const expandedGroups = ref({});
 
         const formatDate = (val) => {
           if (!val) return '日付不明';
@@ -327,6 +345,24 @@
           }
 
           return '';
+        };
+
+        // ★履歴の展開/折り畳み制御
+        const isGroupExpanded = (groupNo) => {
+          return !!expandedGroups.value[groupNo];
+        };
+
+        const toggleGroup = (groupNo) => {
+          expandedGroups.value = {
+            ...expandedGroups.value,
+            [groupNo]: !expandedGroups.value[groupNo]
+          };
+        };
+
+        const getVisibleRecords = (group) => {
+          if (!group || !group.records) return [];
+          if (isGroupExpanded(group.no)) return group.records;
+          return group.records.slice(0, 1);
         };
 
         // ★改修1：爆速キャッシュ＆裏更新ロジック
@@ -456,7 +492,10 @@
           refreshData,
           formatDate,
           calcWorkHoursText,
-          calcLeadTimeText
+          calcLeadTimeText,
+          isGroupExpanded,
+          toggleGroup,
+          getVisibleRecords
         };
       }
     }).mount('#app');
