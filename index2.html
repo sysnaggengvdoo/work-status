@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -47,8 +48,9 @@
         .main-content { padding: 16px; margin: 0 auto; }
 
         .group-header { background: #374151; color: white; padding: 8px 15px; border-radius: 6px; margin-top: 20px; margin-bottom: 10px; font-size: 1.1em; display: flex; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .card { background: white; padding: 15px; margin-bottom: 15px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s; border-left: 8px solid #9ca3af; border: 1px solid #e5e7eb; border-left-width: 8px; }
+        .card { background: white; padding: 15px; margin-bottom: 15px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s; border-left: 8px solid #9ca3af; border: 1px solid #e5e7eb; border-left-width: 8px; cursor: pointer; }
         .card:active { transform: scale(0.98); }
+        .card:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.12); }
         
         /* ステータス別の左フチ色 */
         .status-planned { border-left-color: #fcd34d !important; background-color: #fefce8; } 
@@ -71,6 +73,10 @@
             width: 100%;
             height: calc(100vh - 110px);
             border: none;
+        }
+
+        .drawer-panel {
+            transition: transform 0.22s ease-out;
         }
     </style>
 </head>
@@ -112,7 +118,7 @@
       </div>
     </nav>
 
-    <div id="assigneeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-[200] flex items-center justify-center">
+    <div id="assigneeModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-[220] flex items-center justify-center">
         <div class="bg-white p-5 rounded-lg w-11/12 max-w-md max-h-[85vh] flex flex-col shadow-2xl">
             <h2 class="text-xl font-bold mb-3 border-b pb-2 text-gray-800" id="modalTitle">担当者を選択</h2>
             <div id="assigneeList" class="flex-1 overflow-y-auto space-y-2 mb-4 p-1">
@@ -121,6 +127,17 @@
                 <button onclick="closeAssigneeModal()" class="px-5 py-3 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300">キャンセル</button>
                 <button onclick="confirmAssignee()" class="px-5 py-3 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 shadow-md">確定して保存</button>
             </div>
+        </div>
+    </div>
+
+    <!-- ★案件編集用スライドパネル -->
+    <div id="editDrawerOverlay" class="fixed inset-0 bg-black bg-opacity-40 hidden z-[180]" onclick="closeEditDrawer()">
+        <div 
+            id="editDrawerPanel" 
+            onclick="event.stopPropagation()" 
+            class="drawer-panel absolute top-0 right-0 h-full w-full sm:max-w-lg bg-white shadow-2xl transform translate-x-full flex flex-col"
+        >
+            <div id="editDrawerContent" class="h-full flex flex-col"></div>
         </div>
     </div>
 
@@ -133,6 +150,7 @@
     let globalData = [];
     let attendanceData = {}; 
     let currentEditingId = null; 
+    let drawerEditingId = null;
     
     // ★保留されたステータスとURLを記憶する変数
     let pendingStatus = null;
@@ -172,6 +190,28 @@
         }
 
         return "text-blue-500";
+    }
+
+    function getStatusBadgeHtml(status) {
+        const safeStatus = status || "未着手";
+
+        if (isWorkingStatus(safeStatus)) {
+            return `<span class="inline-block bg-yellow-100 text-yellow-800 border border-yellow-300 px-2 py-0.5 rounded text-xs font-bold">${safeStatus}</span>`;
+        }
+
+        if (safeStatus === "完了") {
+            return `<span class="inline-block bg-green-100 text-green-800 border border-green-300 px-2 py-0.5 rounded text-xs font-bold">完了</span>`;
+        }
+
+        if (safeStatus === "繰越") {
+            return `<span class="inline-block bg-orange-100 text-orange-800 border border-orange-300 px-2 py-0.5 rounded text-xs font-bold">繰越</span>`;
+        }
+
+        if (safeStatus === "保留") {
+            return `<span class="inline-block bg-gray-100 text-gray-700 border border-gray-300 px-2 py-0.5 rounded text-xs font-bold">保留</span>`;
+        }
+
+        return `<span class="inline-block bg-white text-gray-500 border border-gray-300 px-2 py-0.5 rounded text-xs font-bold">${safeStatus}</span>`;
     }
 
     function switchMainTab(tabName) {
@@ -282,100 +322,31 @@
 
                 const div = document.createElement('div');
                 div.className = `card ${statusClass}`;
+                div.addEventListener('click', () => openEditDrawer(row["ID"]));
                 
                 const outputDisplay = row["出"] ? `<div class="output-tag">出力: ${row["出"]}</div>` : "";
+                const statusBadge = getStatusBadgeHtml(status);
+                const tantoDisplay = row["担当"] || "未定";
                 
-                const kintoneSmallLink = row["修理カードURL"] 
-                    ? `<a href="${row["修理カードURL"]}" target="_blank" class="text-blue-500 hover:text-blue-700 ml-2" title="修理カードを開く"><i class="fas fa-external-link-alt"></i></a>` 
-                    : "";
-
-                let actionHtml = `<div id="action-container-${row["ID"]}" class="mt-4">`;
-                
-                actionHtml += `<textarea id="note-${row["ID"]}" placeholder="備考を入力..." class="w-full p-2 text-sm border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-colors" rows="2">${row["備考"] || ""}</textarea>`;
-                
-                if (status !== "完了") {
-                    actionHtml += `<div class="flex justify-end mt-1 mb-3">
-                        <button onclick="updateStatus('${row["ID"]}', '${status}')" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-1.5 px-3 rounded shadow-sm transition"><i class="fas fa-save"></i> 備考のみ保存</button>
-                    </div>`;
-                } else {
-                    actionHtml += `<div class="h-2"></div>`;
-                }
-
-                // ★index2正式値：開始ボタンは「作業中（繰越）」「作業中（完了）」を送信
-                // ★現行v3の「完了予定」はGAS側で開始時間記録対象として両立
-                if (status === "未着手" || status === "") {
-                    actionHtml += `
-                        <div class="flex gap-2 mt-1">
-                            <button onclick="updateStatus('${row["ID"]}', '作業中（繰越）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-1 rounded-lg shadow-md flex items-center justify-center transition duration-200 text-sm">
-                                <i class="fas fa-play mr-1"></i> 作業開始（繰越）
-                            </button>
-                            <button onclick="updateStatus('${row["ID"]}', '作業中（完了）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-1 rounded-lg shadow-md flex items-center justify-center transition duration-200 text-sm">
-                                <i class="fas fa-play mr-1"></i> 作業開始（完了）
-                            </button>
-                        </div>
-                    `;
-                } else if (isWorkingStatus(status)) {
-                    let statusLabel = getWorkingStatusLabel(status);
-                    let pulseColor = getWorkingStatusColor(status);
-                    
-                    actionHtml += `
-                        <div class="text-xs ${pulseColor} font-bold mb-1 animate-pulse"><i class="fas fa-cog fa-spin"></i> ${statusLabel}</div>
-                        <div class="flex gap-2 mt-1">
-                            <button onclick="updateStatus('${row["ID"]}', '完了')" class="flex-[2] bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-2 rounded-lg shadow-md flex items-center justify-center gap-2 transition duration-200">
-                                <i class="fas fa-check-square"></i> 作業完了にする
-                            </button>
-                            <button onclick="updateStatus('${row["ID"]}', '繰越')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 font-bold py-2 px-1 rounded-lg text-sm transition duration-200 shadow-sm">
-                                ➡ 繰越
-                            </button>
-                        </div>
-                        <div class="text-right mt-2">
-                            <button onclick="updateStatus('${row["ID"]}', '未着手')" class="text-xs text-gray-400 underline hover:text-gray-600 transition">間違えて開始したため未着手に戻す</button>
-                        </div>
-                    `;
-                } else if (status === "繰越" || status === "保留") {
-                    actionHtml += `
-                        <div class="bg-orange-50 border border-orange-200 text-orange-800 rounded-lg p-3 text-center shadow-inner flex flex-col items-center justify-center">
-                            <i class="fas fa-arrow-circle-right text-2xl text-orange-500 mb-1"></i>
-                            <p class="font-bold">作業繰越</p>
-                        </div>
-                        <div class="text-right mt-2">
-                            <button onclick="updateStatus('${row["ID"]}', '未着手')" class="text-xs text-gray-400 underline hover:text-gray-600 transition">繰越を取り消す</button>
-                        </div>
-                    `;
-                } else if (status === "完了") {
-                    actionHtml += `
-                        <div class="bg-green-50 border border-green-200 text-green-800 rounded-lg p-3 text-center shadow-inner flex flex-col items-center justify-center">
-                            <i class="fas fa-check-circle text-2xl text-green-500 mb-1"></i>
-                            <p class="font-bold">作業完了</p>
-                        </div>
-                        <div class="text-right mt-2">
-                            <button onclick="updateStatus('${row["ID"]}', '未着手')" class="text-xs text-gray-400 underline hover:text-gray-600 transition">完了を取り消す</button>
-                        </div>
-                    `;
-                }
-
-                actionHtml += `</div>`; // action-container end
-
                 div.innerHTML = `
                     <div class="card-header">
                         <div style="flex: 1; padding-right: 10px;">
                             <span>${row["整理No."]}：${row["顧客名"] || "-"}</span>
-                            ${kintoneSmallLink}
                         </div>
                         ${outputDisplay}
                     </div>
-                    <div class="info"><span class="priority-text">優先順：${row["順"] || "-"}</span></div>
-                    <div class="info"><strong>作業内容:</strong> ${row["作業内容"] || "-"}</div>
-                    
-                    <div class="info mt-3 mb-2 flex items-center">
-                        <strong class="whitespace-nowrap">担当:</strong> 
-                        <button onclick="openAssigneeModal('${row["ID"]}', '${row["部署"]}')" class="ml-2 bg-white hover:bg-blue-50 text-blue-700 py-2 px-3 rounded border border-blue-400 shadow-sm text-sm font-bold transition-colors w-full text-left flex justify-between items-center">
-                            <span id="display-tanto-${row["ID"]}">${row["担当"] || "未定（タップして選択）"}</span>
-                            <i class="fas fa-user-edit text-blue-300"></i>
-                        </button>
+
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <div class="info mb-0"><span class="priority-text">優先順：${row["順"] || "-"}</span></div>
+                        ${statusBadge}
                     </div>
 
-                    ${actionHtml}
+                    <div class="info"><strong>作業内容:</strong> ${row["作業内容"] || "-"}</div>
+                    <div class="info"><strong>担当:</strong> ${tantoDisplay}</div>
+
+                    <div class="mt-3 text-right text-xs text-blue-600 font-bold">
+                        タップして編集・操作 <i class="fas fa-chevron-right ml-1"></i>
+                    </div>
                 `;
                 container.appendChild(div);
             });
@@ -384,6 +355,172 @@
         if (filteredData.length === 0) {
             container.innerHTML = '<div style="text-align:center; padding:30px; color:#6b7280; background:white; border-radius:8px; border:1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">一致する指示書がありません</div>';
         }
+    }
+
+    function buildActionHtml(row) {
+        const status = row["完了確認"] || "未着手";
+
+        let actionHtml = `<div id="action-container-${row["ID"]}" class="mt-4">`;
+        
+        actionHtml += `<textarea id="note-${row["ID"]}" placeholder="備考を入力..." class="w-full p-2 text-sm border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-colors" rows="4">${row["備考"] || ""}</textarea>`;
+        
+        if (status !== "完了") {
+            actionHtml += `<div class="flex justify-end mt-1 mb-3">
+                <button onclick="updateStatus('${row["ID"]}', '${status}')" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-1.5 px-3 rounded shadow-sm transition"><i class="fas fa-save"></i> 備考のみ保存</button>
+            </div>`;
+        } else {
+            actionHtml += `<div class="h-2"></div>`;
+        }
+
+        // ★index2正式値：開始ボタンは「作業中（繰越）」「作業中（完了）」を送信
+        // ★現行v3の「完了予定」はGAS側で開始時間記録対象として両立
+        if (status === "未着手" || status === "") {
+            actionHtml += `
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-2">
+                    <div class="text-sm font-bold text-gray-700 mb-2">作業開始</div>
+                    <div class="flex gap-2 mt-1">
+                        <button onclick="updateStatus('${row["ID"]}', '作業中（繰越）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-1 rounded-lg shadow-md flex items-center justify-center transition duration-200 text-sm">
+                            <i class="fas fa-play mr-1"></i> 作業開始（繰越）
+                        </button>
+                        <button onclick="updateStatus('${row["ID"]}', '作業中（完了）', '${row["修理カードURL"] || ""}')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-1 rounded-lg shadow-md flex items-center justify-center transition duration-200 text-sm">
+                            <i class="fas fa-play mr-1"></i> 作業開始（完了）
+                        </button>
+                    </div>
+                </div>
+            `;
+        } else if (isWorkingStatus(status)) {
+            let statusLabel = getWorkingStatusLabel(status);
+            let pulseColor = getWorkingStatusColor(status);
+            
+            actionHtml += `
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-2">
+                    <div class="text-xs ${pulseColor} font-bold mb-2 animate-pulse"><i class="fas fa-cog fa-spin"></i> ${statusLabel}</div>
+                    <div class="flex gap-2 mt-1">
+                        <button onclick="updateStatus('${row["ID"]}', '完了')" class="flex-[2] bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-2 rounded-lg shadow-md flex items-center justify-center gap-2 transition duration-200">
+                            <i class="fas fa-check-square"></i> 作業完了にする
+                        </button>
+                        <button onclick="updateStatus('${row["ID"]}', '繰越')" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 font-bold py-2 px-1 rounded-lg text-sm transition duration-200 shadow-sm">
+                            ➡ 繰越
+                        </button>
+                    </div>
+                    <div class="text-right mt-2">
+                        <button onclick="updateStatus('${row["ID"]}', '未着手')" class="text-xs text-gray-400 underline hover:text-gray-600 transition">間違えて開始したため未着手に戻す</button>
+                    </div>
+                </div>
+            `;
+        } else if (status === "繰越" || status === "保留") {
+            actionHtml += `
+                <div class="bg-orange-50 border border-orange-200 text-orange-800 rounded-lg p-3 text-center shadow-inner flex flex-col items-center justify-center">
+                    <i class="fas fa-arrow-circle-right text-2xl text-orange-500 mb-1"></i>
+                    <p class="font-bold">作業繰越</p>
+                </div>
+                <div class="text-right mt-2">
+                    <button onclick="updateStatus('${row["ID"]}', '未着手')" class="text-xs text-gray-400 underline hover:text-gray-600 transition">繰越を取り消す</button>
+                </div>
+            `;
+        } else if (status === "完了") {
+            actionHtml += `
+                <div class="bg-green-50 border border-green-200 text-green-800 rounded-lg p-3 text-center shadow-inner flex flex-col items-center justify-center">
+                    <i class="fas fa-check-circle text-2xl text-green-500 mb-1"></i>
+                    <p class="font-bold">作業完了</p>
+                </div>
+                <div class="text-right mt-2">
+                    <button onclick="updateStatus('${row["ID"]}', '未着手')" class="text-xs text-gray-400 underline hover:text-gray-600 transition">完了を取り消す</button>
+                </div>
+            `;
+        }
+
+        actionHtml += `</div>`; // action-container end
+        return actionHtml;
+    }
+
+    function openEditDrawer(id) {
+        drawerEditingId = id;
+        renderEditDrawer();
+
+        const overlay = document.getElementById('editDrawerOverlay');
+        const panel = document.getElementById('editDrawerPanel');
+
+        overlay.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            panel.classList.remove('translate-x-full');
+            panel.classList.add('translate-x-0');
+        });
+    }
+
+    function closeEditDrawer() {
+        const overlay = document.getElementById('editDrawerOverlay');
+        const panel = document.getElementById('editDrawerPanel');
+
+        panel.classList.remove('translate-x-0');
+        panel.classList.add('translate-x-full');
+
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            drawerEditingId = null;
+        }, 220);
+    }
+
+    function renderEditDrawer() {
+        const content = document.getElementById('editDrawerContent');
+        if (!content) return;
+
+        const row = globalData.find(item => String(item["ID"]) === String(drawerEditingId));
+
+        if (!row) {
+            content.innerHTML = `
+                <div class="p-4 border-b bg-red-50 text-red-700 font-bold">
+                    案件が見つかりません
+                </div>
+                <div class="p-4">
+                    <button onclick="closeEditDrawer()" class="w-full bg-gray-200 text-gray-700 font-bold py-3 rounded">閉じる</button>
+                </div>
+            `;
+            return;
+        }
+
+        const status = row["完了確認"] || "未着手";
+        const outputDisplay = row["出"] ? `<span class="inline-block bg-gray-100 text-gray-700 border border-gray-300 px-2 py-1 rounded text-xs font-bold">出力: ${row["出"]}</span>` : "";
+        const statusBadge = getStatusBadgeHtml(status);
+
+        content.innerHTML = `
+            <div class="bg-blue-700 text-white p-4 shadow-md">
+                <div class="flex justify-between items-start gap-3">
+                    <div class="min-w-0">
+                        <div class="text-lg font-black leading-tight">
+                            ${row["整理No."]}：${row["顧客名"] || "-"}
+                        </div>
+                        <div class="mt-2 flex flex-wrap items-center gap-2">
+                            ${statusBadge}
+                            ${outputDisplay}
+                        </div>
+                    </div>
+                    <button onclick="closeEditDrawer()" class="shrink-0 bg-blue-900 bg-opacity-40 hover:bg-opacity-70 text-white rounded-full w-9 h-9 flex items-center justify-center">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 bg-gray-50">
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-4">
+                    <div class="info"><span class="priority-text">優先順：${row["順"] || "-"}</span></div>
+                    <div class="info mt-2"><strong>部署:</strong> ${row["部署"] || "-"}</div>
+                    <div class="info mt-2"><strong>作業内容:</strong><br>${row["作業内容"] || "-"}</div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-4">
+                    <div class="info mb-2 flex items-center">
+                        <strong class="whitespace-nowrap">担当:</strong> 
+                        <button onclick="openAssigneeModal('${row["ID"]}', '${row["部署"] || "その他（部署未定）"}')" class="ml-2 bg-white hover:bg-blue-50 text-blue-700 py-2 px-3 rounded border border-blue-400 shadow-sm text-sm font-bold transition-colors w-full text-left flex justify-between items-center">
+                            <span id="display-tanto-${row["ID"]}">${row["担当"] || "未定（タップして選択）"}</span>
+                            <i class="fas fa-user-edit text-blue-300"></i>
+                        </button>
+                    </div>
+
+                    ${buildActionHtml(row)}
+                </div>
+            </div>
+        `;
     }
 
     // ★追加：fromUpdateStatusフラグを設け、単なる担当者変更ボタンからの呼び出し時は記憶をリセット
@@ -400,7 +537,8 @@
         const listContainer = document.getElementById('assigneeList');
         listContainer.innerHTML = '';
 
-        const currentTantoStr = document.getElementById(`display-tanto-${id}`).innerText;
+        const currentTantoEl = document.getElementById(`display-tanto-${id}`);
+        const currentTantoStr = currentTantoEl ? currentTantoEl.innerText : "";
         const currentTantoArr = currentTantoStr.split(',').map(s => s.trim());
 
         const availableMembers = attendanceData[dept] || [];
@@ -437,10 +575,12 @@
         const selectedMembers = Array.from(checkboxes).map(cb => cb.value);
         
         const displaySpan = document.getElementById(`display-tanto-${currentEditingId}`);
-        if (selectedMembers.length > 0) {
-            displaySpan.innerText = selectedMembers.join(', ');
-        } else {
-            displaySpan.innerText = '未定（タップして選択）';
+        if (displaySpan) {
+            if (selectedMembers.length > 0) {
+                displaySpan.innerText = selectedMembers.join(', ');
+            } else {
+                displaySpan.innerText = '未定（タップして選択）';
+            }
         }
         
         const targetId = currentEditingId;
@@ -466,7 +606,8 @@
     // ※時刻はGAS側で取得・記録する
     async function updateStatus(id, newStatus, linkUrl = null) {
         
-        let newTanto = document.getElementById(`display-tanto-${id}`).innerText;
+        const tantoEl = document.getElementById(`display-tanto-${id}`);
+        let newTanto = tantoEl ? tantoEl.innerText : "";
         if (newTanto === "未定（タップして選択）") newTanto = "";
 
         // 担当者が未選択の場合、押そうとしていたボタンの意図を記憶してポップアップを開く
@@ -488,17 +629,20 @@
             window.open(linkUrl, '_blank');
         }
 
-        const newNote = document.getElementById(`note-${id}`).value;
+        const noteEl = document.getElementById(`note-${id}`);
+        const newNote = noteEl ? noteEl.value : "";
 
         // UIを「更新中」状態にして連打を防止
         const container = document.getElementById(`action-container-${id}`);
-        const originalHtml = container.innerHTML;
-        container.innerHTML = `
-            <div class="text-center py-8 text-blue-600 font-bold bg-blue-50 rounded-lg border border-blue-200 mt-2">
-                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i><br>
-                データを保存中...
-            </div>
-        `;
+        const originalHtml = container ? container.innerHTML : "";
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-blue-600 font-bold bg-blue-50 rounded-lg border border-blue-200 mt-2">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i><br>
+                    データを保存中...
+                </div>
+            `;
+        }
 
         try {
             const response = await fetch(gasUrl, {
@@ -525,14 +669,19 @@
                 }));
 
                 // 画面を再描画して新しいUI状態を反映
-                renderData(); 
+                renderData();
+
+                // 編集パネルが開いている場合は中身も更新
+                if (drawerEditingId && String(drawerEditingId) === String(id)) {
+                    renderEditDrawer();
+                }
             } else {
                 alert("更新失敗: " + result.error);
-                container.innerHTML = originalHtml;
+                if (container) container.innerHTML = originalHtml;
             }
         } catch (error) {
             alert("通信エラーが発生しました。");
-            container.innerHTML = originalHtml;
+            if (container) container.innerHTML = originalHtml;
         }
     }
 
@@ -541,3 +690,4 @@
 
 </body>
 </html>
+```
