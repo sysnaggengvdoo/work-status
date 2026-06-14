@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -126,7 +127,9 @@
                       {{ log['完了確認'] }}
                     </span>
                   </div>
-                  <span class="text-sm font-bold text-blue-800">担当: {{ log['担当'] }}</span>
+                  <span class="text-sm font-bold text-blue-800">
+                    {{ getTantoLabel(log) }}: {{ log['担当'] }}
+                  </span>
                 </div>
 
                 <!-- ★工数表示：30分単位 / 開始・終了時刻は非表示 -->
@@ -231,6 +234,37 @@
         const formatDate = (val) => {
           if (!val) return '日付不明';
           return String(val).split(' ')[0];
+        };
+
+        // ★出張・車両系だけ、担当ラベルを「車両」に切り替える
+        const getTantoLabel = (log) => {
+          const dept = String(
+            log['部署'] ||
+            log['部門'] ||
+            log['分類'] ||
+            log['区分'] ||
+            log['範囲'] ||
+            ''
+          );
+
+          const tanto = String(log['担当'] || '');
+
+          if (
+            dept.includes('出張') ||
+            dept.includes('車両') ||
+            dept.includes('運搬') ||
+            tanto.includes('人乗り') ||
+            tanto.includes('号車') ||
+            tanto.includes('社用車') ||
+            tanto.includes('レンタ') ||
+            tanto.includes('トラック') ||
+            tanto.includes('ハイエース') ||
+            tanto.includes('軽バン')
+          ) {
+            return '車両';
+          }
+
+          return '担当';
         };
 
         // ★日時データを安全にDate化する
@@ -494,7 +528,8 @@
           calcLeadTimeText,
           isGroupExpanded,
           toggleGroup,
-          getVisibleRecords
+          getVisibleRecords,
+          getTantoLabel
         };
       }
     }).mount('#app');
